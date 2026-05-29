@@ -110,45 +110,8 @@ export function WeeklyDynamicsPage() {
           </button>
         </div>
 
-        {loading ? (
-          <p className="text-center text-soft-400 py-8">Загрузка...</p>
-        ) : !hasData ? (
-          <SoftCard className="p-6 text-center">
-            <p className="text-soft-500 mb-2">Пока рано для выводов</p>
-            <p className="text-soft-400 text-sm">
-              Динамика появится после 2-3 записей. Не спеши.
-            </p>
-          </SoftCard>
-        ) : (
-          <div className="space-y-3">
-            {days.map((day) => (
-              <SoftCard key={day.date} className="p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-soft-700">
-                    {formatDate(day.date)}
-                  </span>
-                  <div className="flex gap-3 text-sm">
-                    {day.mood !== null && (
-                      <span className="text-green-600">Н: {day.mood}</span>
-                    )}
-                    {day.anxiety !== null && (
-                      <span className="text-orange-600">Т: {day.anxiety}</span>
-                    )}
-                    {day.energy !== null && (
-                      <span className="text-blue-600">Э: {day.energy}</span>
-                    )}
-                    {day.mood === null && day.anxiety === null && day.energy === null && (
-                      <span className="text-soft-300">—</span>
-                    )}
-                  </div>
-                </div>
-              </SoftCard>
-            ))}
-          </div>
-        )}
-
         {/* Weekly Reflection Card */}
-        <SoftCard className="p-4 mt-6 bg-soft-50 border-soft-200">
+        <SoftCard className="p-4 mb-6 bg-soft-50 border-soft-200">
           <h2 className="text-sm font-semibold text-soft-700 mb-2">
             Недельное отражение
           </h2>
@@ -216,6 +179,33 @@ export function WeeklyDynamicsPage() {
             </div>
           )}
         </SoftCard>
+
+        {loading ? (
+          <p className="text-center text-soft-400 py-4">Загрузка...</p>
+        ) : !hasData ? (
+          <SoftCard className="p-6 text-center">
+            <p className="text-soft-500 mb-2">Пока рано для выводов</p>
+            <p className="text-soft-400 text-sm">Динамика появится после 2-3 записей. Не спеши.</p>
+          </SoftCard>
+        ) : (
+          <div className="space-y-3">
+            {days.map((day) => (
+              <SoftCard key={day.date} className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-soft-700">{formatDate(day.date)}</span>
+                  <div className="flex gap-3 text-sm">
+                    {day.mood !== null && <span className="text-green-600">Н: {day.mood}</span>}
+                    {day.anxiety !== null && <span className="text-orange-600">Т: {day.anxiety}</span>}
+                    {day.energy !== null && <span className="text-blue-600">Э: {day.energy}</span>}
+                    {day.mood === null && day.anxiety === null && day.energy === null && (
+                      <span className="text-soft-300">—</span>
+                    )}
+                  </div>
+                </div>
+              </SoftCard>
+            ))}
+          </div>
+        )}
 
         <p className="text-center text-soft-400 text-xs mt-6">
           Н — настроение, Т — тревога, Э — энергия
