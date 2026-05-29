@@ -5,6 +5,7 @@ import { listEntries, type Entry } from '../api/entries'
 import { getHomeSummary, type HomeSummary, type ReturnState } from '../api/home'
 import { getAuthDebugInfo, type AuthMode } from '../telegram/init'
 import { BetaDisclaimer } from '../components/BetaDisclaimer'
+import { getStoredUser } from '../utils/auth'
 
 function DebugAuth() {
   const [info, setInfo] = useState<{
@@ -88,10 +89,20 @@ export function HomePage() {
   const copy = RETURN_STATE_COPY[returnState]
   const showQuickPulse = returnState === 'after_pause' || returnState === 'long_pause'
 
+  const storedUser = getStoredUser()
+  const userLabel = storedUser?.first_name || (storedUser?.username ? `@${storedUser.username}` : null)
+
   return (
     <div className="min-h-screen p-4">
       <BetaDisclaimer />
       <div className="max-w-md mx-auto space-y-4">
+        {userLabel && (
+          <div className="flex justify-end">
+            <span className="text-xs text-soft-400 bg-soft-50 px-2 py-1 rounded-lg">
+              {userLabel}
+            </span>
+          </div>
+        )}
         <DebugAuth />
 
         <div className="text-center py-6">

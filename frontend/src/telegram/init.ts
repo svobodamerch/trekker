@@ -1,5 +1,5 @@
 import { authTelegram } from '../api/auth'
-import { setAuthToken, getAuthToken } from '../utils/auth'
+import { setAuthToken, getAuthToken, setStoredUser } from '../utils/auth'
 
 // Global Telegram WebApp object type
 declare global {
@@ -70,7 +70,8 @@ export async function authenticateWithTelegram(): Promise<boolean> {
   try {
     const response = await authTelegram(initData)
     setAuthToken(response.token)
-    
+    setStoredUser(response.user)
+
     if (import.meta.env.DEV) {
       console.log('[Auth] Success, token received')
     }
