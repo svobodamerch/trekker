@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     ai_api_key: str = ""
     ai_model: str = ""
     cors_origins: str = ""
+    admin_secret: str = ""
 
     class Config:
         env_file = ".env"

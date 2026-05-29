@@ -191,9 +191,9 @@ export function HomePage() {
 
         <button
           onClick={() => navigate('/feedback')}
-          className="w-full py-3 text-soft-400 text-sm hover:text-soft-600"
+          className="w-full py-3 bg-white border border-soft-200 rounded-xl text-soft-600 text-sm font-medium hover:border-soft-400 transition-colors"
         >
-          Есть мысль или что-то непонятно? Написать обратную связь
+          💬 Оставить обратную связь
         </button>
       </div>
     </div>
