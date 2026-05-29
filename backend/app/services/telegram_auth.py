@@ -14,10 +14,11 @@ def validate_telegram_init_data(init_data: str) -> Optional[dict]:
     Validate Telegram WebApp init_data using HMAC-SHA256.
     Returns parsed user data if valid, None otherwise.
     """
+    # Mock mode overrides HMAC validation entirely
+    if settings.telegram_auth_mock:
+        return _parse_init_data_simple(init_data)
+
     if not settings.bot_token:
-        # In mock mode, accept any init_data format
-        if settings.telegram_auth_mock:
-            return _parse_init_data_simple(init_data)
         return None
 
     try:
