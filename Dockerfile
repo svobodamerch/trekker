@@ -2,15 +2,18 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
-# Copy backend files
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy everything first
+COPY . .
 
-COPY backend/ .
+# Install dependencies from backend
+RUN pip install --no-cache-dir -r backend/requirements.txt
+
+# Set working directory to backend
+WORKDIR /app/backend
 
 # Set environment
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app/backend
 ENV PORT=8000
 
 # Run migrations and start server
-CMD alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT"]
