@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { HomePage } from './pages/HomePage'
 import { NewPulsePage } from './pages/NewPulsePage'
@@ -6,8 +7,26 @@ import { WeeklyDynamicsPage } from './pages/WeeklyDynamicsPage'
 import { GoalsPage } from './pages/GoalsPage'
 import { GoalEditorPage } from './pages/GoalEditorPage'
 import { NewDiaryPage } from './pages/NewDiaryPage'
+import { authenticateWithTelegram } from './telegram/init'
+import { isAuthenticated } from './utils/auth'
 
 function App() {
+  const [authReady, setAuthReady] = useState(isAuthenticated())
+
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      authenticateWithTelegram().finally(() => setAuthReady(true))
+    }
+  }, [])
+
+  if (!authReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-soft-400 text-sm">Загрузка...</p>
+      </div>
+    )
+  }
+
   return (
     <BrowserRouter>
       <Routes>
