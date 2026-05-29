@@ -212,6 +212,52 @@ else:
 "
 ```
 
+## BotFather Pre-Start Setup
+
+Before inviting beta users, configure the bot profile via @BotFather:
+
+### 1. /setname
+```
+Пульс — мягкое самонаблюдение
+```
+
+### 2. /setabouttext
+Short text shown in bot profile:
+```
+Мягкое самонаблюдение в Telegram: Пульс дня, цели, динамика и недельные отражения.
+```
+
+### 3. /setdescription
+Full description shown before /start:
+```
+Приложение для мягкого самонаблюдения.
+
+Каждый день можно за 1 минуту отметить настроение, энергию, тревогу, короткий инсайт и один фокус на завтра.
+
+Также можно задать цели на месяц, год, 3 года, 5 лет и описать "жизнь мечты".
+
+Это ранняя тестовая версия. Приложение не является медицинской или психологической помощью.
+```
+
+### 4. /setcommands
+```
+start - начать и открыть приложение
+pulse - записать Пульс дня
+goals - открыть цели и ориентиры
+history - посмотреть историю записей
+feedback - отправить обратную связь
+help - как пользоваться
+```
+
+### 5. /setmenubutton
+- Text: `Открыть приложение`
+- URL: `https://frontend-mu-ecru-12.vercel.app` (replace with production URL)
+
+### 6. /setuserpic
+Upload a bot avatar image.
+
+---
+
 ## Rollback
 
 If critical issue:

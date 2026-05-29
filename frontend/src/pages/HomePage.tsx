@@ -155,21 +155,35 @@ export function HomePage() {
             onClick={() => navigate('/history')}
             className="py-3 bg-white border border-soft-200 rounded-xl text-soft-700 font-medium hover:border-soft-400"
           >
-            История
+            История Пульса
           </button>
           <button
             onClick={() => navigate('/analytics')}
             className="py-3 bg-white border border-soft-200 rounded-xl text-soft-700 font-medium hover:border-soft-400"
           >
-            Динамика
+            Моя динамика
           </button>
           <button
             onClick={() => navigate('/goals')}
             className="py-3 bg-white border border-soft-200 rounded-xl text-soft-700 font-medium hover:border-soft-400 col-span-2"
           >
-            Цели и ориентиры
+            Цели и жизнь мечты
           </button>
         </div>
+
+        <div className="bg-soft-50 rounded-xl p-4 text-sm text-soft-500 space-y-1">
+          <p className="font-medium text-soft-600 mb-2">Как пользоваться</p>
+          <p>1. Записывай Пульс дня — настроение, энергию и тревогу.</p>
+          <p>2. Смотри динамику, когда накопится несколько записей.</p>
+          <p>3. Связывай день с целями и ориентирами.</p>
+        </div>
+
+        <button
+          onClick={() => navigate('/feedback')}
+          className="w-full py-3 text-soft-400 text-sm hover:text-soft-600"
+        >
+          Есть мысль или что-то непонятно? Написать обратную связь
+        </button>
       </div>
     </div>
   )

@@ -22,31 +22,28 @@ export function BetaDisclaimer() {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <SoftCard className="max-w-md w-full bg-white p-6">
-        <h2 className="text-lg font-semibold text-soft-800 mb-4">
+        <h2 className="text-lg font-semibold text-soft-800 mb-3">
           Перед началом
         </h2>
-        
-        <div className="space-y-3 text-sm text-soft-600 mb-6">
+
+        <div className="space-y-3 text-sm text-soft-600 mb-5">
           <p>
-            Это приложение создано для личного самонаблюдения: коротких ежедневных отметок состояния, дневниковых записей, целей и мягкой рефлексии.
+            Это пространство для мягкого самонаблюдения. Здесь можно за минуту отметить настроение, энергию и тревогу, сохранить инсайт дня и один маленький фокус на завтра.
           </p>
-          
-          <div className="bg-soft-50 rounded-lg p-4 space-y-2">
-            <p className="font-medium text-soft-700">Важно:</p>
-            <ul className="list-disc list-inside space-y-1 text-soft-600">
-              <li>это не медицинская помощь</li>
-              <li>это не психотерапия</li>
-              <li>приложение не ставит диагнозы</li>
-              <li>рекомендации и AI-отражения являются гипотезами для размышления, а не инструкциями к действию</li>
-            </ul>
+
+          <div className="bg-soft-50 rounded-lg p-3 space-y-1">
+            <p className="font-medium text-soft-700 text-xs uppercase tracking-wide">Важно</p>
+            <p className="text-soft-600">
+              Это не медицинская помощь и не психотерапия. Приложение не ставит диагнозы. AI-отражения — гипотезы для размышления, не инструкции.
+            </p>
           </div>
-          
+
           <p>
-            Если тебе тяжело, небезопасно или нужна срочная помощь, пожалуйста, обратись к близким, врачу, психологу или в экстренные службы.
+            Если тебе небезопасно или нужна срочная помощь, пожалуйста, обратись к близким, специалисту или в экстренные службы.
           </p>
-          
+
           <p className="text-xs text-soft-400">
-            Продолжая пользоваться приложением, ты понимаешь, что участвуешь в раннем тестировании, где возможны ошибки и изменения.
+            Это ранняя тестовая версия — возможны ошибки и изменения.
           </p>
         </div>
 

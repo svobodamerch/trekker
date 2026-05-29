@@ -5,6 +5,7 @@ from app.models.voice import VoiceNote
 from app.models.ai import AIAnalysis
 from app.models.event import Event
 from app.models.reminder import ReminderLog
+from app.models.feedback import FeedbackMessage
 
 __all__ = [
     "User",
@@ -17,4 +18,5 @@ __all__ = [
     "AIAnalysis",
     "Event",
     "ReminderLog",
+    "FeedbackMessage",
 ]

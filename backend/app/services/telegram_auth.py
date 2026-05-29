@@ -74,15 +74,29 @@ def validate_telegram_init_data(init_data: str) -> Optional[dict]:
 
 
 def _parse_init_data_simple(init_data: str) -> Optional[dict]:
-    """Parse init_data for mock mode (accepts test format)."""
+    """Parse init_data for mock mode (accepts real Telegram format and test format)."""
+    import json as _json
     try:
         parsed = dict(urllib.parse.parse_qsl(init_data))
-        
-        # Support both real Telegram format and mock format
+
+        # Real Telegram format: user field contains JSON
+        if 'user' in parsed:
+            user_data = _json.loads(parsed['user'])
+            user_id = user_data.get('id')
+            if user_id:
+                return {
+                    'telegram_user_id': str(user_id),
+                    'username': user_data.get('username'),
+                    'first_name': user_data.get('first_name'),
+                    'last_name': user_data.get('last_name'),
+                    'language_code': user_data.get('language_code', 'ru'),
+                }
+
+        # Fallback mock format: flat user_id field
         user_id = parsed.get('user_id') or parsed.get('id')
         if not user_id:
             return None
-            
+
         return {
             'telegram_user_id': str(user_id),
             'username': parsed.get('username', 'mock_user'),
