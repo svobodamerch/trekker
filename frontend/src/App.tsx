@@ -8,6 +8,7 @@ import { GoalsPage } from './pages/GoalsPage'
 import { GoalEditorPage } from './pages/GoalEditorPage'
 import { NewDiaryPage } from './pages/NewDiaryPage'
 import { FeedbackPage } from './pages/FeedbackPage'
+import { LifeBalancePage } from './pages/LifeBalancePage'
 import { authenticateWithTelegram } from './telegram/init'
 import { isAuthenticated, clearAuthToken } from './utils/auth'
 
@@ -90,6 +91,7 @@ function App() {
         <Route path="/goals/new" element={<GoalEditorPage />} />
         <Route path="/diary" element={<NewDiaryPage />} />
         <Route path="/feedback" element={<FeedbackPage />} />
+        <Route path="/life-balance" element={<LifeBalancePage />} />
       </Routes>
     </BrowserRouter>
   )

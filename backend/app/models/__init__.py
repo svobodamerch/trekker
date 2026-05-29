@@ -6,6 +6,7 @@ from app.models.ai import AIAnalysis
 from app.models.event import Event
 from app.models.reminder import ReminderLog
 from app.models.feedback import FeedbackMessage
+from app.models.life_balance import LifeBalanceSnapshot, LifeBalanceScore
 
 __all__ = [
     "User",
@@ -19,4 +20,6 @@ __all__ = [
     "Event",
     "ReminderLog",
     "FeedbackMessage",
+    "LifeBalanceSnapshot",
+    "LifeBalanceScore",
 ]

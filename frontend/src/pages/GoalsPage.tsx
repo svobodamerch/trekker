@@ -96,6 +96,20 @@ export function GoalsPage() {
           </button>
         </div>
 
+        {/* Life Balance block */}
+        <SoftCard
+          className="p-4 mb-6 cursor-pointer hover:border-soft-300 transition-colors"
+          onClick={() => navigate('/life-balance')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-soft-700">Колесо баланса жизни</p>
+              <p className="text-xs text-soft-400 mt-0.5">Текущий срез по 8 сферам жизни</p>
+            </div>
+            <span className="text-soft-400 text-lg">→</span>
+          </div>
+        </SoftCard>
+
         {/* Review Prompt */}
         {!loading && needsReview && needsReview.count > 0 && !reviewingGoal && (
           <SoftCard className="p-4 mb-6 bg-soft-50 border-soft-200">
