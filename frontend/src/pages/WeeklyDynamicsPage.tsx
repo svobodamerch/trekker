@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { SoftCard } from '../components/SoftCard'
 import type { Entry } from '../api/entries'
 import { createWeeklyReflection, getLatestWeeklyReflection, type WeeklyReflection } from '../api/weeklyReflection'
+import { listEntries } from '../api/entries'
 
 interface DayData {
   date: string
@@ -21,8 +22,7 @@ export function WeeklyDynamicsPage() {
 
   useEffect(() => {
     // Fetch entries and group by day
-    fetch('http://localhost:8000/entries?limit=50')
-      .then((r) => r.json())
+    listEntries(50)
       .then((data) => {
         const entries: Entry[] = data.items
         const last7Days = getLast7Days()
