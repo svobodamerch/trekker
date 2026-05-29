@@ -55,15 +55,26 @@ function App() {
   }
 
   if (authFailed) {
+    const twa = window.Telegram?.WebApp
+    const debugInfo = {
+      hasTelegram: !!window.Telegram,
+      hasWebApp: !!twa,
+      initData: twa?.initData ? twa.initData.substring(0, 80) + '...' : '(empty)',
+      initDataUnsafe: JSON.stringify(twa?.initDataUnsafe || {}),
+      version: (twa as any)?.version,
+    }
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="max-w-sm text-center space-y-3">
-          <p className="text-soft-700 font-medium">Откройте приложение из Telegram</p>
-          <p className="text-soft-400 text-sm">
-            Это приложение работает только внутри Telegram Mini App.
-            Открой его через бота, чтобы данные сохранились в твоём личном кабинете.
-          </p>
-        </div>
+      <div className="min-h-screen p-4 text-xs text-soft-600 space-y-2">
+        <p className="font-bold text-red-600">Auth failed — debug:</p>
+        {Object.entries(debugInfo).map(([k, v]) => (
+          <p key={k}><b>{k}:</b> {String(v)}</p>
+        ))}
+        <button
+          onClick={() => { clearAuthToken(); window.location.reload() }}
+          className="mt-4 px-4 py-2 bg-soft-600 text-white rounded-xl text-sm"
+        >
+          Повторить
+        </button>
       </div>
     )
   }
