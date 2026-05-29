@@ -33,8 +33,30 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('reminder_logs',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('reminder_date', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('sent_at', sa.DateTime(), nullable=False),
+    sa.Column('status', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_reminder_logs_reminder_date'), 'reminder_logs', ['reminder_date'], unique=False)
+    op.create_index(op.f('ix_reminder_logs_user_id'), 'reminder_logs', ['user_id'], unique=False)
+    op.add_column('ai_analyses', sa.Column('period_start', sa.DateTime(), nullable=True))
+    op.add_column('ai_analyses', sa.Column('period_end', sa.DateTime(), nullable=True))
+    op.add_column('ai_analyses', sa.Column('entry_count', sa.Integer(), nullable=True))
+    op.add_column('ai_analyses', sa.Column('raw_output', sa.JSON(), nullable=True))
 
 
 def downgrade() -> None:
     """Downgrade schema."""
+    op.drop_column('ai_analyses', 'raw_output')
+    op.drop_column('ai_analyses', 'entry_count')
+    op.drop_column('ai_analyses', 'period_end')
+    op.drop_column('ai_analyses', 'period_start')
+    op.drop_index(op.f('ix_reminder_logs_user_id'), table_name='reminder_logs')
+    op.drop_index(op.f('ix_reminder_logs_reminder_date'), table_name='reminder_logs')
+    op.drop_table('reminder_logs')
     op.drop_table('feedback_messages')
