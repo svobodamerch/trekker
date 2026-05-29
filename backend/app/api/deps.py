@@ -30,10 +30,7 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ) -> User:
-    """JWT auth - used when telegram_auth_mock is false."""
-    if settings.telegram_auth_mock:
-        return get_current_user_mock(db)
-
+    """JWT auth - validates JWT token regardless of mock mode."""
     if not credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
