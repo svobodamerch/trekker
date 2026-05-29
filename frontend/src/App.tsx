@@ -16,26 +16,34 @@ function App() {
   const [authFailed, setAuthFailed] = useState(false)
 
   useEffect(() => {
-    const inTelegram = !!window.Telegram?.WebApp?.initData
-    if (inTelegram) {
-      // Always re-auth in Telegram to ensure correct user isolation
-      // (clears any stale token from a different Telegram account)
-      clearAuthToken()
-      authenticateWithTelegram().then((ok) => {
-        if (!ok) setAuthFailed(true)
-        setAuthReady(true)
-      })
-    } else if (isAuthenticated()) {
-      // Browser with existing token (dev or returning session)
-      setAuthReady(true)
-    } else if (import.meta.env.DEV) {
-      // Local dev without Telegram
-      authenticateWithTelegram().finally(() => setAuthReady(true))
-    } else {
-      // Production without Telegram initData — don't show other user's data
-      setAuthFailed(true)
-      setAuthReady(true)
+    const twa = window.Telegram?.WebApp
+    if (twa) {
+      twa.ready()
+      twa.expand()
     }
+
+    // Small delay to let Telegram inject initData after ready()
+    const run = () => {
+      const initData = window.Telegram?.WebApp?.initData
+      if (initData) {
+        // Always re-auth in Telegram to ensure correct user isolation
+        clearAuthToken()
+        authenticateWithTelegram().then((ok) => {
+          if (!ok) setAuthFailed(true)
+          setAuthReady(true)
+        })
+      } else if (isAuthenticated()) {
+        setAuthReady(true)
+      } else if (import.meta.env.DEV) {
+        authenticateWithTelegram().finally(() => setAuthReady(true))
+      } else {
+        setAuthFailed(true)
+        setAuthReady(true)
+      }
+    }
+
+    // Give Telegram ~100ms to populate initData after ready()
+    setTimeout(run, 100)
   }, [])
 
   if (!authReady) {
