@@ -5,6 +5,7 @@ import { HistoryPage } from './pages/HistoryPage'
 import { WeeklyDynamicsPage } from './pages/WeeklyDynamicsPage'
 import { GoalsPage } from './pages/GoalsPage'
 import { GoalEditorPage } from './pages/GoalEditorPage'
+import { NewDiaryPage } from './pages/NewDiaryPage'
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/analytics" element={<WeeklyDynamicsPage />} />
         <Route path="/goals" element={<GoalsPage />} />
         <Route path="/goals/new" element={<GoalEditorPage />} />
+        <Route path="/diary" element={<NewDiaryPage />} />
       </Routes>
     </BrowserRouter>
   )

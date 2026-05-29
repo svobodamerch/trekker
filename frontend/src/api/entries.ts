@@ -9,6 +9,7 @@ export interface EntryCreate {
   insight?: string
   gratitude?: string
   tomorrow_commitment?: string
+  raw_text?: string
   source?: string
 }
 
@@ -23,6 +24,7 @@ export interface Entry {
   insight: string | null
   gratitude: string | null
   tomorrow_commitment: string | null
+  raw_text: string | null
   source: string
   created_at: string
 }

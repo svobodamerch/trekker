@@ -12,6 +12,7 @@ class EntryCreate(BaseModel):
     insight: Optional[str] = None
     gratitude: Optional[str] = None
     tomorrow_commitment: Optional[str] = None
+    raw_text: Optional[str] = None
     source: str = Field(default="mini_app", pattern="^(mini_app|bot|voice|import)$")
 
 
@@ -26,6 +27,7 @@ class EntryOut(BaseModel):
     insight: Optional[str]
     gratitude: Optional[str]
     tomorrow_commitment: Optional[str]
+    raw_text: Optional[str]
     source: str
     created_at: datetime
 
