@@ -1,6 +1,10 @@
 """
 AI Service for entry and goal analysis.
-Uses OpenAI when AI_API_KEY is configured, falls back to placeholder otherwise.
+Supports OpenAI and Anthropic Claude.
+Auto-detects provider by API key prefix:
+  - OpenAI: sk-... (not starting with sk-ant-)
+  - Anthropic: sk-ant-...
+Falls back to placeholder if no key configured.
 """
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -8,7 +12,7 @@ import json
 from app.models import Entry, Goal
 from app.config import settings
 
-# Lazy import to avoid errors if openai not installed
+# Lazy imports to avoid errors if packages not installed
 try:
     from openai import AsyncOpenAI
     OPENAI_AVAILABLE = True
@@ -16,11 +20,31 @@ except ImportError:
     OPENAI_AVAILABLE = False
     AsyncOpenAI = None
 
+try:
+    from anthropic import AsyncAnthropic
+    ANTHROPIC_AVAILABLE = True
+except ImportError:
+    ANTHROPIC_AVAILABLE = False
+    AsyncAnthropic = None
+
 
 class AIService:
     def __init__(self):
         self.api_key = settings.ai_api_key
         self.model = settings.ai_model or "gpt-4"
+        self.provider = self._detect_provider()
+
+    def _detect_provider(self) -> str:
+        """Auto-detect AI provider from API key prefix."""
+        if not self.api_key:
+            return "none"
+        # Anthropic keys start with sk-ant-
+        if self.api_key.startswith("sk-ant-"):
+            return "anthropic"
+        # OpenAI keys start with sk- (and not sk-ant-)
+        if self.api_key.startswith("sk-"):
+            return "openai"
+        return "unknown"
 
     async def analyze_entry(self, entry: Entry) -> str:
         """Generate gentle analysis of a daily entry."""
@@ -174,41 +198,73 @@ class AIService:
         entries: List[Entry],
         goals: List[Goal],
     ) -> Dict[str, Any]:
-        """Real AI weekly reflection using OpenAI."""
-        if not OPENAI_AVAILABLE or not self.api_key:
-            return self._placeholder_weekly_reflection(entries, goals)
-
+        """Real AI weekly reflection using configured provider."""
         try:
-            client = AsyncOpenAI(api_key=self.api_key)
             prompt = self.build_weekly_prompt(entries, goals)
+            system_prompt = "Ты мягкий помощник по самонаблюдению. Ты не психолог и не врач. Ты помогаешь пользователю заметить паттерны в своём состоянии без оценки и давления."
 
-            response = await client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "Ты мягкий помощник по самонаблюдению. Ты не психолог и не врач. Ты помогаешь пользователю заметить паттерны в своём состоянии без оценки и давления."},
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.7,
-                max_tokens=800,
-            )
+            if self.provider == "anthropic" and ANTHROPIC_AVAILABLE:
+                content = await self._call_anthropic(system_prompt, prompt)
+            elif self.provider == "openai" and OPENAI_AVAILABLE:
+                content = await self._call_openai(system_prompt, prompt)
+            else:
+                return self._placeholder_weekly_reflection(entries, goals)
 
-            content = response.choices[0].message.content
             if not content:
                 raise ValueError("Empty AI response")
 
             # Parse structured response
             result = self._parse_ai_response(content)
             result["is_placeholder"] = False
-            result["raw_output"] = content  # For debugging
+            result["raw_output"] = content
+            result["provider"] = self.provider
             return result
 
         except Exception as e:
             # Fallback to placeholder on any error
-            print(f"AI error: {e}")
+            print(f"AI error ({self.provider}): {e}")
             result = self._placeholder_weekly_reflection(entries, goals)
             result["is_placeholder"] = True
             result["error"] = str(e)
+            result["provider"] = self.provider
             return result
+
+    async def _call_openai(self, system_prompt: str, user_prompt: str) -> str:
+        """Call OpenAI API."""
+        client = AsyncOpenAI(api_key=self.api_key)
+        response = await client.chat.completions.create(
+            model=self.model or "gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.7,
+            max_tokens=800,
+        )
+        return response.choices[0].message.content or ""
+
+    async def _call_anthropic(self, system_prompt: str, user_prompt: str) -> str:
+        """Call Anthropic Claude API."""
+        client = AsyncAnthropic(api_key=self.api_key)
+        # Claude uses different model naming
+        model = self.model or "claude-3-haiku-20240307"
+        if model.startswith("gpt-"):
+            # User set OpenAI model but using Anthropic key, use default Claude model
+            model = "claude-3-haiku-20240307"
+
+        response = await client.messages.create(
+            model=model,
+            max_tokens=800,
+            temperature=0.7,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_prompt}],
+        )
+        # Extract text from content blocks
+        text_parts = []
+        for block in response.content:
+            if hasattr(block, 'text'):
+                text_parts.append(block.text)
+        return "\n".join(text_parts)
 
     def _parse_ai_response(self, content: str) -> Dict[str, Any]:
         """Parse AI response into structured fields."""
