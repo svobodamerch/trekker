@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ScaleInput } from '../components/ScaleInput'
 import { TextArea } from '../components/TextArea'
 import { createEntry } from '../api/entries'
+import { processVoiceRecording } from '../api/voice'
 
 export function NewPulsePage() {
   const navigate = useNavigate()
@@ -19,6 +20,76 @@ export function NewPulsePage() {
 
   const canSave = form.mood !== undefined && form.anxiety !== undefined && form.energy !== undefined
 
+  // Voice recording state
+  const [isRecording, setIsRecording] = useState(false)
+  const [isProcessingVoice, setIsProcessingVoice] = useState(false)
+  const [voicePreview, setVoicePreview] = useState<string | null>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/ogg' })
+        await handleVoiceProcessing(audioBlob)
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop())
+      }
+
+      mediaRecorder.start()
+      setIsRecording(true)
+    } catch (err) {
+      alert('Не удалось получить доступ к микрофону. Проверь разрешения.')
+    }
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop()
+      setIsRecording(false)
+    }
+  }
+
+  const handleVoiceProcessing = async (audioBlob: Blob) => {
+    setIsProcessingVoice(true)
+    try {
+      const result = await processVoiceRecording(audioBlob)
+
+      if (result.success && result.recognized_type === 'entry') {
+        // Fill form with voice data
+        setForm(prev => ({
+          ...prev,
+          mood: result.created.mood ?? prev.mood,
+          energy: result.created.energy ?? prev.energy,
+          anxiety: result.created.anxiety ?? prev.anxiety,
+        }))
+        setVoicePreview(result.transcript)
+      } else if (result.success && result.recognized_type === 'goal') {
+        // Redirect to goals if voice was classified as goal
+        alert(`Распознана цель: "${result.created.title}". Перенаправляю в раздел целей.`)
+        navigate('/goals')
+        return
+      } else {
+        setVoicePreview(result.transcript || 'Голос не распознан')
+      }
+    } catch (err) {
+      alert('Не удалось обработать голос. Попробуй ещё раз.')
+    } finally {
+      setIsProcessingVoice(false)
+    }
+  }
+
   const handleSave = async () => {
     if (!canSave) return
     setSaving(true)
@@ -31,7 +102,8 @@ export function NewPulsePage() {
         insight: form.insight || undefined,
         gratitude: form.gratitude || undefined,
         tomorrow_commitment: form.tomorrow_commitment || undefined,
-        source: 'mini_app',
+        raw_text: voicePreview || undefined,  // Include voice transcript if present
+        source: voicePreview ? 'voice' : 'mini_app',
       })
       navigate('/')
     } catch (err) {
@@ -46,6 +118,51 @@ export function NewPulsePage() {
         <h1 className="text-xl font-semibold text-soft-800 mb-6">
           Новый Пульс
         </h1>
+
+        {/* Voice recording */}
+        <div className="mb-6">
+          {!isRecording && !isProcessingVoice && !voicePreview && (
+            <button
+              onClick={startRecording}
+              className="w-full py-3 bg-white border-2 border-dashed border-soft-300 rounded-xl text-soft-600 flex items-center justify-center gap-2 hover:border-soft-500 hover:text-soft-700 transition-colors"
+            >
+              <span className="text-xl">🎤</span>
+              <span className="text-sm font-medium">Голосовой отчет — скажи вслух</span>
+            </button>
+          )}
+
+          {isRecording && (
+            <div className="flex items-center justify-center gap-3 py-4 bg-red-50 rounded-xl">
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+              <span className="text-red-600 text-sm font-medium">Идет запись... Нажми, чтобы остановить</span>
+              <button
+                onClick={stopRecording}
+                className="px-3 py-1 bg-red-500 text-white text-xs rounded-full"
+              >
+                Стоп
+              </button>
+            </div>
+          )}
+
+          {isProcessingVoice && (
+            <div className="flex items-center justify-center py-4 bg-soft-50 rounded-xl">
+              <span className="text-soft-500 text-sm">Распознаю голос...</span>
+            </div>
+          )}
+
+          {voicePreview && (
+            <div className="p-3 bg-soft-50 rounded-xl">
+              <p className="text-xs text-soft-400 mb-1">Распознано:</p>
+              <p className="text-sm text-soft-700 italic">"{voicePreview}"</p>
+              <button
+                onClick={() => setVoicePreview(null)}
+                className="mt-2 text-xs text-soft-400 hover:text-soft-600"
+              >
+                Очистить
+              </button>
+            </div>
+          )}
+        </div>
 
         <div className="space-y-6">
           <ScaleInput

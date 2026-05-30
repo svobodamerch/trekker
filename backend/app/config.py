@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     ai_model: str = ""
     cors_origins: str = ""
     admin_secret: str = ""
+    groq_api_key: str = ""  # For Whisper voice transcription
 
     class Config:
         env_file = ".env"
