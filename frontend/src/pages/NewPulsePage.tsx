@@ -233,7 +233,7 @@ export function NewPulsePage() {
             rightLabel="Полный ресурс"
           />
 
-          {/* Voice recording - after sliders */}
+          {/* Voice recording - TEMPORARILY DISABLED
           <div className="py-4 border-t border-soft-200">
             {!isRecording && !isProcessingVoice && !voicePreview && (
               <button
@@ -245,100 +245,11 @@ export function NewPulsePage() {
               </button>
             )}
 
-            {isRecording && (
-              <div className="py-6 px-4 bg-gradient-to-br from-soft-100 to-soft-200 rounded-2xl">
-                {/* Real audio wave visualization */}
-                <div className="flex justify-center items-end gap-1 h-16 mb-6">
-                  {audioData.map((value, i) => (
-                    <div
-                      key={i}
-                      className="w-2 bg-soft-500 rounded-full transition-all duration-75"
-                      style={{
-                        height: `${Math.max(8, value)}%`,
-                        opacity: value > 30 ? 1 : 0.5,
-                      }}
-                    />
-                  ))}
-                </div>
-
-                {/* Progress dots */}
-                <div className="flex justify-center gap-1.5 mb-4">
-                  {voiceQuestions.map((_, idx) => (
-                    <div
-                      key={idx}
-                      className={`w-2 h-2 rounded-full transition-colors ${
-                        idx === recordingStep ? 'bg-soft-600' :
-                        idx < recordingStep ? 'bg-soft-400' : 'bg-soft-200'
-                      }`}
-                    />
-                  ))}
-                </div>
-
-                {/* Current question */}
-                <div className="text-center mb-6">
-                  <div className="text-4xl mb-2">{voiceQuestions[recordingStep]?.emoji}</div>
-                  <h3 className="text-lg font-medium text-soft-800 mb-1">
-                    {voiceQuestions[recordingStep]?.question}
-                  </h3>
-                  <p className="text-sm text-soft-500">
-                    {voiceQuestions[recordingStep]?.hint}
-                  </p>
-                </div>
-
-                {/* Navigation */}
-                <div className="flex items-center justify-center gap-3">
-                  {recordingStep > 0 && (
-                    <button
-                      onClick={() => setRecordingStep(prev => prev - 1)}
-                      className="px-4 py-2 text-soft-500 text-sm hover:text-soft-700"
-                    >
-                      ← Назад
-                    </button>
-                  )}
-
-                  <button
-                    onClick={stopRecording}
-                    className="px-6 py-3 bg-red-500 text-white rounded-full font-medium hover:bg-red-600 transition-colors flex items-center gap-2"
-                  >
-                    <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                    Завершить
-                  </button>
-
-                  {recordingStep < voiceQuestions.length - 1 && (
-                    <button
-                      onClick={() => setRecordingStep(prev => prev + 1)}
-                      className="px-4 py-2 text-soft-500 text-sm hover:text-soft-700"
-                    >
-                      Пропустить →
-                    </button>
-                  )}
-                </div>
-
-                <p className="text-center text-xs text-soft-400 mt-3">
-                  Вопрос {recordingStep + 1} из {voiceQuestions.length}
-                </p>
-              </div>
-            )}
-
-            {isProcessingVoice && (
-              <div className="flex items-center justify-center py-4 bg-soft-50 rounded-xl">
-                <span className="text-soft-500 text-sm">Распознаю голос...</span>
-              </div>
-            )}
-
-            {voicePreview && (
-              <div className="p-3 bg-soft-50 rounded-xl">
-                <p className="text-xs text-soft-400 mb-1">Распознано:</p>
-                <p className="text-sm text-soft-700 italic">"{voicePreview}"</p>
-                <button
-                  onClick={() => setVoicePreview(null)}
-                  className="mt-2 text-xs text-soft-400 hover:text-soft-600"
-                >
-                  Очистить
-                </button>
-              </div>
-            )}
+            {isRecording && (...)}
+            {isProcessingVoice && (...)}
+            {voicePreview && (...)}
           </div>
+          */}
 
           <TextArea
             label="Что сейчас в теле?"
