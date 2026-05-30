@@ -15,6 +15,7 @@ export interface CommunityPost {
   comment_count: number
   reaction_count: number
   has_user_reacted: boolean
+  is_own_post: boolean
   created_at: string
 }
 

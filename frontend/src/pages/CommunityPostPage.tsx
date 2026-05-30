@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getPost, createComment, toggleReaction, createReport, CommunityPostDetail } from '../api/community'
+import { getPost, createComment, toggleReaction, createReport, updatePost, deletePost, CommunityPostDetail } from '../api/community'
 
 const COMMENT_TYPES = [
   { value: 'support', label: '🤗 Поддержка', desc: 'Мягкая поддержка и принятие' },
@@ -26,6 +26,16 @@ export function CommunityPostPage() {
   const [showReport, setShowReport] = useState(false)
   const [reportReason, setReportReason] = useState('')
   const [reportDetails, setReportDetails] = useState('')
+  
+  // Edit modal
+  const [showEdit, setShowEdit] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editBody, setEditBody] = useState('')
+  const [editPrompt, setEditPrompt] = useState('')
+  const [saving, setSaving] = useState(false)
+  
+  // Delete confirmation
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const loadPost = async () => {
     if (!id) return
@@ -94,6 +104,47 @@ export function CommunityPostPage() {
       alert('Репорт отправлен. Спасибо.')
     } catch (err) {
       console.error('Failed to report', err)
+    }
+  }
+
+  const openEditModal = () => {
+    if (!post) return
+    setEditTitle(post.title || '')
+    setEditBody(post.body)
+    setEditPrompt(post.discussion_prompt || '')
+    setShowEdit(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!post || !editBody.trim()) return
+    
+    try {
+      setSaving(true)
+      const updated = await updatePost(post.id, {
+        title: editTitle || undefined,
+        body: editBody,
+        discussion_prompt: editPrompt || undefined
+      })
+      // Preserve comments from existing post
+      setPost({ ...updated, comments: post.comments })
+      setShowEdit(false)
+    } catch (err) {
+      console.error('Failed to update post', err)
+      alert('Не удалось сохранить изменения')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!post) return
+    
+    try {
+      await deletePost(post.id)
+      navigate('/community')
+    } catch (err) {
+      console.error('Failed to delete post', err)
+      alert('Не удалось удалить публикацию')
     }
   }
 
@@ -240,6 +291,26 @@ export function CommunityPostPage() {
               <span>💬</span>
               <span>{post.comment_count || 'Комментировать'}</span>
             </button>
+
+            {/* Edit/Delete for own posts */}
+            {post.is_own_post && (
+              <>
+                <button
+                  onClick={openEditModal}
+                  className="text-sm text-soft-400 hover:text-soft-600 ml-auto"
+                  title="Редактировать"
+                >
+                  ✏️
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="text-sm text-red-400 hover:text-red-600"
+                  title="Удалить"
+                >
+                  🗑️
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -312,6 +383,102 @@ export function CommunityPostPage() {
                 <p className="text-soft-700 text-sm">{comment.body}</p>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Edit Modal */}
+        {showEdit && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+              <h2 className="text-xl font-semibold text-soft-800 mb-4">
+                Редактировать публикацию
+              </h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-soft-700 mb-2">
+                    Заголовок <span className="text-soft-400">(необязательно)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder="Заголовок..."
+                    className="w-full p-3 border border-soft-200 rounded-xl text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-soft-700 mb-2">
+                    Текст <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={editBody}
+                    onChange={(e) => setEditBody(e.target.value)}
+                    placeholder="Текст публикации..."
+                    className="w-full p-3 border border-soft-200 rounded-xl text-sm h-40 resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-soft-700 mb-2">
+                    Вопрос к сообществу <span className="text-soft-400">(необязательно)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editPrompt}
+                    onChange={(e) => setEditPrompt(e.target.value)}
+                    placeholder="Что бы вы хотели спросить?"
+                    className="w-full p-3 border border-soft-200 rounded-xl text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowEdit(false)}
+                  className="flex-1 py-3 border border-soft-200 rounded-xl text-soft-600 font-medium"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={!editBody.trim() || saving}
+                  className="flex-1 py-3 bg-soft-600 text-white rounded-xl font-medium disabled:opacity-50"
+                >
+                  {saving ? 'Сохранение...' : 'Сохранить'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6">
+              <h2 className="text-xl font-semibold text-soft-800 mb-4">
+                Удалить публикацию?
+              </h2>
+              <p className="text-soft-600 mb-6">
+                Это действие нельзя отменить. Публикация будет удалена навсегда.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 py-3 border border-soft-200 rounded-xl text-soft-600 font-medium"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="flex-1 py-3 bg-red-500 text-white rounded-xl font-medium"
+                >
+                  Удалить
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

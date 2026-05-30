@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getCommunityFeed, toggleReaction, CommunityPost } from '../api/community'
+import { getCommunityFeed, toggleReaction, updatePost, deletePost, CommunityPost } from '../api/community'
 
 export function CommunityPage() {
   const navigate = useNavigate()
@@ -13,6 +13,16 @@ export function CommunityPage() {
     // Check if user has seen rules
     return !localStorage.getItem('community_rules_seen')
   })
+  
+  // Edit modal state
+  const [editingPost, setEditingPost] = useState<CommunityPost | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editBody, setEditBody] = useState('')
+  const [editPrompt, setEditPrompt] = useState('')
+  const [saving, setSaving] = useState(false)
+  
+  // Delete confirmation
+  const [deletingPost, setDeletingPost] = useState<CommunityPost | null>(null)
 
   const loadFeed = async (reset = false) => {
     try {
@@ -58,6 +68,63 @@ export function CommunityPage() {
       }))
     } catch (err) {
       console.error('Failed to toggle reaction', err)
+    }
+  }
+
+  const openEditModal = (post: CommunityPost) => {
+    setEditingPost(post)
+    setEditTitle(post.title || '')
+    setEditBody(post.body)
+    setEditPrompt(post.discussion_prompt || '')
+  }
+
+  const closeEditModal = () => {
+    setEditingPost(null)
+    setEditTitle('')
+    setEditBody('')
+    setEditPrompt('')
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editingPost || !editBody.trim()) return
+    
+    try {
+      setSaving(true)
+      const updated = await updatePost(editingPost.id, {
+        title: editTitle || undefined,
+        body: editBody,
+        discussion_prompt: editPrompt || undefined
+      })
+      
+      // Update local state
+      setPosts(prev => prev.map(post => 
+        post.id === updated.id ? updated : post
+      ))
+      closeEditModal()
+    } catch (err) {
+      console.error('Failed to update post', err)
+      alert('Не удалось сохранить изменения')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const openDeleteConfirm = (post: CommunityPost) => {
+    setDeletingPost(post)
+  }
+
+  const handleDelete = async () => {
+    if (!deletingPost) return
+    
+    try {
+      await deletePost(deletingPost.id)
+      
+      // Remove from local state
+      setPosts(prev => prev.filter(post => post.id !== deletingPost.id))
+      setDeletingPost(null)
+    } catch (err) {
+      console.error('Failed to delete post', err)
+      alert('Не удалось удалить публикацию')
     }
   }
 
@@ -217,6 +284,32 @@ export function CommunityPage() {
                   <span>💬</span>
                   <span>{post.comment_count || 'Комментарии'}</span>
                 </div>
+
+                {/* Edit/Delete for own posts */}
+                {post.is_own_post && (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openEditModal(post)
+                      }}
+                      className="text-sm text-soft-400 hover:text-soft-600 ml-auto"
+                      title="Редактировать"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openDeleteConfirm(post)
+                      }}
+                      className="text-sm text-red-400 hover:text-red-600"
+                      title="Удалить"
+                    >
+                      🗑️
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           ))}
@@ -249,6 +342,102 @@ export function CommunityPage() {
             >
               Поделиться
             </button>
+          </div>
+        )}
+
+        {/* Edit Modal */}
+        {editingPost && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+              <h2 className="text-xl font-semibold text-soft-800 mb-4">
+                Редактировать публикацию
+              </h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-soft-700 mb-2">
+                    Заголовок <span className="text-soft-400">(необязательно)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder="Заголовок..."
+                    className="w-full p-3 border border-soft-200 rounded-xl text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-soft-700 mb-2">
+                    Текст <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={editBody}
+                    onChange={(e) => setEditBody(e.target.value)}
+                    placeholder="Текст публикации..."
+                    className="w-full p-3 border border-soft-200 rounded-xl text-sm h-40 resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-soft-700 mb-2">
+                    Вопрос к сообществу <span className="text-soft-400">(необязательно)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editPrompt}
+                    onChange={(e) => setEditPrompt(e.target.value)}
+                    placeholder="Что бы вы хотели спросить?"
+                    className="w-full p-3 border border-soft-200 rounded-xl text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={closeEditModal}
+                  className="flex-1 py-3 border border-soft-200 rounded-xl text-soft-600 font-medium"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={!editBody.trim() || saving}
+                  className="flex-1 py-3 bg-soft-600 text-white rounded-xl font-medium disabled:opacity-50"
+                >
+                  {saving ? 'Сохранение...' : 'Сохранить'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {deletingPost && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6">
+              <h2 className="text-xl font-semibold text-soft-800 mb-4">
+                Удалить публикацию?
+              </h2>
+              <p className="text-soft-600 mb-6">
+                Это действие нельзя отменить. Публикация будет удалена навсегда.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeletingPost(null)}
+                  className="flex-1 py-3 border border-soft-200 rounded-xl text-soft-600 font-medium"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="flex-1 py-3 bg-red-500 text-white rounded-xl font-medium"
+                >
+                  Удалить
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

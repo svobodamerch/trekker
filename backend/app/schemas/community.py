@@ -52,6 +52,9 @@ class CommunityPostInFeed(BaseModel):
     reaction_count: int = 0
     has_user_reacted: bool = False
     
+    # Ownership (for edit/delete permissions)
+    is_own_post: bool = False
+    
     created_at: datetime
     
     class Config:

@@ -135,6 +135,7 @@ async def get_feed(
             comment_count=comment_count,
             reaction_count=reaction_count,
             has_user_reacted=has_user_reacted,
+            is_own_post=post.user_id == current_user.id,
             created_at=post.created_at
         ))
     
@@ -198,6 +199,7 @@ async def create_post(
         comment_count=0,
         reaction_count=0,
         has_user_reacted=False,
+        is_own_post=True,  # User always owns their own new post
         created_at=post.created_at
     )
 
@@ -276,6 +278,7 @@ async def get_post(
         comment_count=len(comment_responses),
         reaction_count=reaction_count,
         has_user_reacted=has_user_reacted,
+        is_own_post=post.user_id == current_user.id,
         created_at=post.created_at,
         comments=comment_responses
     )
@@ -556,6 +559,7 @@ async def share_from_source(
         comment_count=0,
         reaction_count=0,
         has_user_reacted=False,
+        is_own_post=True,
         created_at=post.created_at
     )
 
