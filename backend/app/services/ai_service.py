@@ -382,3 +382,215 @@ class AIService:
 5. next_week_focus: Один маленький фокус на ближайшие 7 дней.
 
 Тон: спокойно, бережно, без давления. Не используй медицинские рекомендации."""
+
+    async def analyze_all_entries(
+        self,
+        entries: List[Entry],
+        goals: List[Goal],
+    ) -> Dict[str, Any]:
+        """Analyze all user entries to find deep patterns and insights using Claude AI.
+        
+        Returns structured analysis with:
+        - key_patterns: recurring themes across all entries
+        - emotional_dynamics: mood/energy trends over time
+        - body_signals: physical sensations that repeat
+        - insight_themes: common insights and realizations
+        - goal_alignment: how entries relate to goals
+        - recommendations: gentle suggestions based on data
+        """
+        if len(entries) < 5:
+            return {
+                "key_patterns": "Недостаточно записей для глубокого анализа. Продолжай записывать — анализ появится автоматически когда накопится больше данных.",
+                "emotional_dynamics": "Пока рано выявлять динамику. Минимум 5 записей для базового анализа.",
+                "body_signals": "Нет данных.",
+                "insight_themes": "Нет данных.",
+                "goal_alignment": "Нет данных.",
+                "recommendations": "Продолжать регулярно записывать Пульс — этого достаточно.",
+                "is_placeholder": True,
+            }
+
+        if not self.api_key:
+            return self._placeholder_all_entries_analysis(entries, goals)
+
+        return await self._real_all_entries_analysis(entries, goals)
+
+    def _placeholder_all_entries_analysis(
+        self,
+        entries: List[Entry],
+        goals: List[Goal],
+    ) -> Dict[str, Any]:
+        """Placeholder when no AI key configured."""
+        moods = [e.mood for e in entries if e.mood is not None]
+        energies = [e.energy for e in entries if e.energy is not None]
+        
+        avg_mood = sum(moods) / len(moods) if moods else None
+        avg_energy = sum(energies) / len(energies) if energies else None
+        
+        patterns = f"За период {len(entries)} записей. "
+        if avg_mood:
+            patterns += f"Среднее настроение: {avg_mood:.1f}/10. "
+        if avg_energy:
+            patterns += f"Средняя энергия: {avg_energy:.1f}/10. "
+        patterns += "Когда подключится AI-ключ, здесь появятся глубинные паттерны."
+        
+        return {
+            "key_patterns": patterns,
+            "emotional_dynamics": "Динамика будет видна при подключении Claude AI.",
+            "body_signals": "Паттерны телесных ощущений появятся после AI-анализа.",
+            "insight_themes": "Темы инсайтов будут извлечены при подключении AI.",
+            "goal_alignment": f"Активных целей: {len([g for g in goals if g.status == 'active'])}. Связь с записями проявится после анализа." if goals else "Цели не созданы.",
+            "recommendations": "Продолжать записывать Пульс — анализ появится автоматически.",
+            "is_placeholder": True,
+        }
+
+    async def _real_all_entries_analysis(
+        self,
+        entries: List[Entry],
+        goals: List[Goal],
+    ) -> Dict[str, Any]:
+        """Real AI analysis using Claude."""
+        try:
+            prompt = self.build_all_entries_prompt(entries, goals)
+            system_prompt = "Ты мягкий аналитик самонаблюдений. Ты не психолог и не врач. Ты анализируешь долгосрочные паттерны в записях пользователя и даёшь мягкие гипотезы без давления и оценки."
+
+            if self.provider == "anthropic" and ANTHROPIC_AVAILABLE:
+                content = await self._call_anthropic(system_prompt, prompt)
+            elif self.provider == "openai" and OPENAI_AVAILABLE:
+                content = await self._call_openai(system_prompt, prompt)
+            else:
+                return self._placeholder_all_entries_analysis(entries, goals)
+
+            if not content:
+                raise ValueError("Empty AI response")
+
+            result = self._parse_all_entries_response(content)
+            result["is_placeholder"] = False
+            result["raw_output"] = content
+            result["provider"] = self.provider
+            result["entry_count"] = len(entries)
+            return result
+
+        except Exception as e:
+            print(f"AI all-entries error ({self.provider}): {e}")
+            result = self._placeholder_all_entries_analysis(entries, goals)
+            result["is_placeholder"] = True
+            result["error"] = str(e)
+            return result
+
+    def build_all_entries_prompt(
+        self,
+        entries: List[Entry],
+        goals: List[Goal],
+    ) -> str:
+        """Build prompt for analyzing all entries."""
+        # Limit entries to avoid token overflow
+        MAX_ENTRIES = 100
+        MAX_TEXT_LENGTH = 300
+        
+        entries_text = []
+        for e in entries[:MAX_ENTRIES]:
+            date_str = e.created_at.strftime("%Y-%m-%d") if e.created_at else "Unknown"
+            parts = [f"[{date_str}]"]
+            if e.mood is not None:
+                parts.append(f"Н:{e.mood}")
+            if e.energy is not None:
+                parts.append(f"Э:{e.energy}")
+            if e.anxiety is not None:
+                parts.append(f"Т:{e.anxiety}")
+            if e.body_state:
+                text = e.body_state[:MAX_TEXT_LENGTH] + "..." if len(e.body_state) > MAX_TEXT_LENGTH else e.body_state
+                parts.append(f"Тело: {text}")
+            if e.insight:
+                text = e.insight[:MAX_TEXT_LENGTH] + "..." if len(e.insight) > MAX_TEXT_LENGTH else e.insight
+                parts.append(f"Инсайт: {text}")
+            if e.gratitude:
+                parts.append(f"Благодарность: {e.gratitude}")
+            if e.tomorrow_commitment:
+                parts.append(f"Обязательство: {e.tomorrow_commitment}")
+            entries_text.append(" | ".join(parts))
+        
+        goals_text = []
+        for g in goals:
+            if g.status == "active":
+                goals_text.append(f"- [{g.horizon}] {g.current_title}")
+
+        return f"""Проанализируй все записи пользователя за весь период. Найди глубинные паттерны и мягкие закономерности.
+
+ЗАПИСИ ПОЛЬЗОВАТЕЛЯ ({len(entries)} записей):
+{chr(10).join(entries_text)}
+
+АКТИВНЫЕ ЦЕЛИ:
+{chr(10).join(goals_text) if goals_text else "Цели не созданы."}
+
+Верни структурированный анализ:
+
+1. KEY_PATTERNS: Главные повторяющиеся темы (2-3 предложения)
+2. EMOTIONAL_DYNAMICS: Как менялось настроение и энергия во времени (2-3 предложения)  
+3. BODY_SIGNALS: Какие телесные ощущения повторялись (1-2 предложения)
+4. INSIGHT_THEMES: Какие темы в инсайтах повторялись (2-3 предложения)
+5. GOAL_ALIGNMENT: Насколько записи соответствуют целям (1-2 предложения)
+6. RECOMMENDATIONS: Мягкие рекомендации на основе данных (2-3 предложения)
+
+Тон: бережный, любопытный, без давления и диагностики."""
+
+    def _parse_all_entries_response(self, content: str) -> Dict[str, Any]:
+        """Parse AI response for all-entries analysis."""
+        result = {
+            "key_patterns": "",
+            "emotional_dynamics": "",
+            "body_signals": "",
+            "insight_themes": "",
+            "goal_alignment": "",
+            "recommendations": "",
+        }
+        
+        lines = content.split('\n')
+        current_key = None
+        buffer = []
+        
+        for line in lines:
+            line_lower = line.lower().strip()
+            
+            if 'key_patterns' in line_lower or 'паттерн' in line_lower or 'повторяющиеся темы' in line_lower:
+                if current_key and buffer:
+                    result[current_key] = ' '.join(buffer).strip()
+                current_key = "key_patterns"
+                buffer = []
+            elif 'emotional_dynamics' in line_lower or 'динамик' in line_lower or 'настроение' in line_lower:
+                if current_key and buffer:
+                    result[current_key] = ' '.join(buffer).strip()
+                current_key = "emotional_dynamics"
+                buffer = []
+            elif 'body_signals' in line_lower or 'тел' in line_lower or 'ощущен' in line_lower:
+                if current_key and buffer:
+                    result[current_key] = ' '.join(buffer).strip()
+                current_key = "body_signals"
+                buffer = []
+            elif 'insight_themes' in line_lower or 'инсайт' in line_lower or 'осознан' in line_lower:
+                if current_key and buffer:
+                    result[current_key] = ' '.join(buffer).strip()
+                current_key = "insight_themes"
+                buffer = []
+            elif 'goal_alignment' in line_lower or 'цел' in line_lower or 'соответствие' in line_lower:
+                if current_key and buffer:
+                    result[current_key] = ' '.join(buffer).strip()
+                current_key = "goal_alignment"
+                buffer = []
+            elif 'recommendations' in line_lower or 'рекомендац' in line_lower:
+                if current_key and buffer:
+                    result[current_key] = ' '.join(buffer).strip()
+                current_key = "recommendations"
+                buffer = []
+            elif current_key:
+                if line.strip() and not line.startswith('#') and not line.startswith('**'):
+                    buffer.append(line.strip())
+        
+        if current_key and buffer:
+            result[current_key] = ' '.join(buffer).strip()
+        
+        # Defaults
+        for key in result:
+            if not result[key]:
+                result[key] = "Анализ этого аспекта появится при следующем обновлении."
+        
+        return result
