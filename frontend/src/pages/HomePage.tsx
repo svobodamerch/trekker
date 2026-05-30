@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getUsersStats, UsersStats } from '../api/users'
 import { SoftCard } from '../components/SoftCard'
 import { listEntries, type Entry } from '../api/entries'
 import { getHomeSummary, type HomeSummary, type ReturnState } from '../api/home'
@@ -71,6 +72,7 @@ export function HomePage() {
   const [latestEntry, setLatestEntry] = useState<Entry | null>(null)
   const [homeSummary, setHomeSummary] = useState<HomeSummary | null>(null)
   const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState<UsersStats | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -83,6 +85,9 @@ export function HomePage() {
     ]).finally(() => {
       setLoading(false)
     })
+    
+    // Load user stats
+    getUsersStats().then(setStats).catch(console.error)
   }, [])
 
   const returnState = homeSummary?.return_state || 'new_user'
@@ -201,6 +206,56 @@ export function HomePage() {
         >
           💬 Оставить обратную связь
         </button>
+
+        {/* User Statistics */}
+        {stats && (
+          <div className="pt-4 border-t border-soft-200">
+            <p className="text-xs text-soft-400 uppercase tracking-wide mb-2">Сообщество</p>
+            <div className="flex gap-4">
+              <div>
+                <span className="text-lg font-semibold text-soft-700">{stats.total_users}</span>
+                <span className="text-soft-500 text-sm ml-1">пользователей</span>
+              </div>
+              <div>
+                <span className="text-lg font-semibold text-soft-700">{stats.active_users}</span>
+                <span className="text-soft-500 text-sm ml-1">активных за 7 дней</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Version History */}
+        <div className="pt-4 border-t border-soft-200">
+          <p className="text-xs text-soft-400 uppercase tracking-wide mb-3">История версий и обновлений</p>
+          <div className="space-y-3 text-sm">
+            <div className="bg-soft-50 rounded-xl p-3">
+              <p className="font-medium text-soft-700 mb-1">v1.1 — Сейчас</p>
+              <ul className="text-soft-600 space-y-1 ml-4 list-disc">
+                <li>Круг поддержки — общая лента с постами и комментариями</li>
+                <li>Возможность поделиться пульсом в ленту</li>
+                <li>Редактирование и удаление своих постов</li>
+                <li>Профиль пользователя с именем, полом и датой рождения</li>
+              </ul>
+            </div>
+            <div className="bg-soft-50 rounded-xl p-3">
+              <p className="font-medium text-soft-700 mb-1">v1.0 — Май 2025</p>
+              <ul className="text-soft-600 space-y-1 ml-4 list-disc">
+                <li>Пульс дня — настроение, тревога, энергия</li>
+                <li>Цели и мечты</li>
+                <li>Жизненный баланс</li>
+                <li>Голосовые заметки</li>
+              </ul>
+            </div>
+            <div className="rounded-xl p-3 border border-dashed border-soft-300">
+              <p className="font-medium text-soft-700 mb-1">В планах</p>
+              <ul className="text-soft-500 space-y-1 ml-4 list-disc">
+                <li>Аналитика и инсайты по пройденным трекерам</li>
+                <li>Уведомления и напоминания</li>
+                <li>Рефлексии по неделям и месяцам</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
