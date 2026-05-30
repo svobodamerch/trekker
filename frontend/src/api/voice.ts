@@ -1,5 +1,3 @@
-import { api } from './client'
-
 export interface VoiceProcessResult {
   success: boolean
   recognized_type: 'entry' | 'goal'
