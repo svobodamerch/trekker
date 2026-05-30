@@ -117,18 +117,19 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/pulse" element={<NewPulsePage />} />
-        <Route path="/history" element={<HistoryPage />} />
-        <Route path="/analytics" element={<WeeklyDynamicsPage />} />
-        <Route path="/goals" element={<GoalsPage />} />
-        <Route path="/goals/new" element={<GoalEditorPage />} />
-        <Route path="/diary" element={<NewDiaryPage />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
+        <Route path="/" element={needsOnboarding ? <Navigate to="/onboarding" replace /> : <HomePage />} />
+        <Route path="/pulse" element={needsOnboarding ? <Navigate to="/onboarding" replace /> : <NewPulsePage />} />
+        <Route path="/history" element={needsOnboarding ? <Navigate to="/onboarding" replace /> : <HistoryPage />} />
+        <Route path="/analytics" element={needsOnboarding ? <Navigate to="/onboarding" replace /> : <WeeklyDynamicsPage />} />
+        <Route path="/goals" element={needsOnboarding ? <Navigate to="/onboarding" replace /> : <GoalsPage />} />
+        <Route path="/goals/new" element={needsOnboarding ? <Navigate to="/onboarding" replace /> : <GoalEditorPage />} />
+        <Route path="/diary" element={needsOnboarding ? <Navigate to="/onboarding" replace /> : <NewDiaryPage />} />
         <Route path="/feedback" element={<FeedbackPage />} />
-        <Route path="/life-balance" element={<LifeBalancePage />} />
-        <Route path="/community" element={<CommunityPage />} />
-        <Route path="/community/post/:id" element={<CommunityPostPage />} />
-        <Route path="/community/new" element={<CommunityNewPostPage />} />
+        <Route path="/life-balance" element={needsOnboarding ? <Navigate to="/onboarding" replace /> : <LifeBalancePage />} />
+        <Route path="/community" element={needsOnboarding ? <Navigate to="/onboarding" replace /> : <CommunityPage />} />
+        <Route path="/community/post/:id" element={needsOnboarding ? <Navigate to="/onboarding" replace /> : <CommunityPostPage />} />
+        <Route path="/community/new" element={needsOnboarding ? <Navigate to="/onboarding" replace /> : <CommunityNewPostPage />} />
       </Routes>
     </BrowserRouter>
   )
