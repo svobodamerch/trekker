@@ -24,8 +24,21 @@ export function NewPulsePage() {
   const [isRecording, setIsRecording] = useState(false)
   const [isProcessingVoice, setIsProcessingVoice] = useState(false)
   const [voicePreview, setVoicePreview] = useState<string | null>(null)
+  const [recordingStep, setRecordingStep] = useState(0)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
+
+  // Voice guidance questions
+  const voiceQuestions = [
+    { emoji: '🎭', question: 'Какое сейчас настроение?', hint: 'Скажи число от 1 до 10' },
+    { emoji: '⚡', question: 'Какая энергия в теле?', hint: 'Оцени от 1 до 10' },
+    { emoji: '🌊', question: 'Есть ли тревога?', hint: 'Или скажи "нет"' },
+    { emoji: '🎯', question: 'Что в теле сейчас?', hint: 'Напряжение, расслабленность...' },
+    { emoji: '💡', question: 'Главный инсайт дня?', hint: 'Или скажи "нет"' },
+    { emoji: '🙏', question: 'За что благодарен?', hint: 'Можно пропустить' },
+    { emoji: '📍', question: 'Момент осознанности?', hint: 'Когда был здесь и сейчас?' },
+    { emoji: '🌅', question: 'Обязательство на завтра?', hint: 'Одно, что точно сделаешь?' },
+  ]
 
   const startRecording = async () => {
     try {
@@ -49,6 +62,7 @@ export function NewPulsePage() {
 
       mediaRecorder.start()
       setIsRecording(true)
+      setRecordingStep(0)
     } catch (err) {
       alert('Не удалось получить доступ к микрофону. Проверь разрешения.')
     }
@@ -58,6 +72,7 @@ export function NewPulsePage() {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop()
       setIsRecording(false)
+      setRecordingStep(0)
     }
   }
 
@@ -132,15 +147,63 @@ export function NewPulsePage() {
           )}
 
           {isRecording && (
-            <div className="flex items-center justify-center gap-3 py-4 bg-red-50 rounded-xl">
-              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-              <span className="text-red-600 text-sm font-medium">Идет запись... Нажми, чтобы остановить</span>
-              <button
-                onClick={stopRecording}
-                className="px-3 py-1 bg-red-500 text-white text-xs rounded-full"
-              >
-                Стоп
-              </button>
+            <div className="py-6 px-4 bg-gradient-to-br from-soft-100 to-soft-200 rounded-2xl">
+              {/* Progress dots */}
+              <div className="flex justify-center gap-1 mb-4">
+                {voiceQuestions.map((_, idx) => (
+                  <div
+                    key={idx}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      idx === recordingStep ? 'bg-soft-600' :
+                      idx < recordingStep ? 'bg-soft-400' : 'bg-soft-200'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {/* Current question */}
+              <div className="text-center mb-4">
+                <div className="text-4xl mb-2">{voiceQuestions[recordingStep]?.emoji}</div>
+                <h3 className="text-lg font-medium text-soft-800 mb-1">
+                  {voiceQuestions[recordingStep]?.question}
+                </h3>
+                <p className="text-sm text-soft-500">
+                  {voiceQuestions[recordingStep]?.hint}
+                </p>
+              </div>
+
+              {/* Navigation */}
+              <div className="flex items-center justify-center gap-3">
+                {recordingStep > 0 && (
+                  <button
+                    onClick={() => setRecordingStep(prev => prev - 1)}
+                    className="px-4 py-2 text-soft-500 text-sm hover:text-soft-700"
+                  >
+                    ← Назад
+                  </button>
+                )}
+
+                <button
+                  onClick={stopRecording}
+                  className="px-6 py-3 bg-red-500 text-white rounded-full font-medium hover:bg-red-600 transition-colors flex items-center gap-2"
+                >
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                  Завершить
+                </button>
+
+                {recordingStep < voiceQuestions.length - 1 && (
+                  <button
+                    onClick={() => setRecordingStep(prev => prev + 1)}
+                    className="px-4 py-2 text-soft-500 text-sm hover:text-soft-700"
+                  >
+                    Пропустить →
+                  </button>
+                )}
+              </div>
+
+              <p className="text-center text-xs text-soft-400 mt-3">
+                Вопрос {recordingStep + 1} из {voiceQuestions.length}
+              </p>
             </div>
           )}
 
