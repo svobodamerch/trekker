@@ -17,8 +17,8 @@ class User(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Profile fields
-    gender: Optional[str] = None  # male, female, other
-    age: Optional[int] = None
+    gender: Optional[str] = None  # male, female
+    birth_date: Optional[str] = None  # YYYY-MM-DD format
     onboarding_completed: bool = Field(default=False)
 
     settings: Optional["UserSettings"] = Relationship(back_populates="user")

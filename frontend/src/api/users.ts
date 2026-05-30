@@ -7,7 +7,8 @@ export interface UserProfile {
   first_name?: string
   last_name?: string
   gender?: string
-  age?: number
+  birth_date?: string  // YYYY-MM-DD
+  age?: number  // Calculated from birth_date
   onboarding_completed: boolean
   timezone: string
 }
@@ -16,14 +17,14 @@ export interface UserProfileUpdate {
   first_name?: string
   last_name?: string
   gender?: string
-  age?: number
+  birth_date?: string  // YYYY-MM-DD
 }
 
 export interface OnboardingData {
   first_name: string
   last_name: string
-  gender: string
-  age: number
+  gender: string  // male, female
+  birth_date: string  // YYYY-MM-DD
 }
 
 export interface UsersStats {

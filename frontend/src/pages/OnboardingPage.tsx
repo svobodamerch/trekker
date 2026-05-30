@@ -1,19 +1,17 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { completeOnboarding } from '../api/users'
 
 export function OnboardingPage() {
-  const navigate = useNavigate()
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
-    gender: '' as 'male' | 'female' | 'other' | '',
-    age: '' as string | number,
+    gender: '' as 'male' | 'female' | '',
+    birthDate: '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const canSubmit = form.firstName.trim() && form.lastName.trim() && form.gender && form.age
+  const canSubmit = form.firstName.trim() && form.lastName.trim() && form.gender && form.birthDate
 
   const handleSubmit = async () => {
     if (!canSubmit) return
@@ -26,9 +24,10 @@ export function OnboardingPage() {
         first_name: form.firstName.trim(),
         last_name: form.lastName.trim(),
         gender: form.gender,
-        age: Number(form.age)
+        birth_date: form.birthDate
       })
-      navigate('/')
+      // Force page reload to recheck onboarding status
+      window.location.href = '/'
     } catch (err) {
       setError('Не удалось сохранить профиль. Попробуй ещё раз.')
       setSaving(false)
@@ -87,11 +86,10 @@ export function OnboardingPage() {
             <label className="block text-sm font-medium text-soft-700 mb-2">
               Пол <span className="text-red-500">*</span>
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {[
                 { value: 'male', label: 'Мужской' },
-                { value: 'female', label: 'Женский' },
-                { value: 'other', label: 'Другой' }
+                { value: 'female', label: 'Женский' }
               ].map((option) => (
                 <button
                   key={option.value}
@@ -108,18 +106,16 @@ export function OnboardingPage() {
             </div>
           </div>
 
-          {/* Age */}
+          {/* Birth Date */}
           <div>
             <label className="block text-sm font-medium text-soft-700 mb-2">
-              Возраст <span className="text-red-500">*</span>
+              Дата рождения <span className="text-red-500">*</span>
             </label>
             <input
-              type="number"
-              min="13"
-              max="100"
-              value={form.age}
-              onChange={(e) => setForm({ ...form, age: e.target.value })}
-              placeholder="Сколько тебе лет?"
+              type="date"
+              value={form.birthDate}
+              onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
+              max={new Date().toISOString().split('T')[0]}
               className="w-full px-4 py-3 rounded-xl border border-soft-200 bg-white text-soft-900 placeholder:text-soft-400 focus:outline-none focus:ring-2 focus:ring-soft-400"
             />
           </div>
