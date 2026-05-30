@@ -8,6 +8,7 @@ from app.models.reminder import ReminderLog
 from app.models.feedback import FeedbackMessage
 from app.models.life_balance import LifeBalanceSnapshot, LifeBalanceScore
 from app.models.community import CommunityPost, CommunityComment, CommunityReaction, CommunityReport
+from app.models.daily_goals import DailyTenGoals
 
 __all__ = [
     "User",
@@ -28,4 +29,6 @@ __all__ = [
     "CommunityComment",
     "CommunityReaction",
     "CommunityReport",
+    # Daily Goals
+    "DailyTenGoals",
 ]

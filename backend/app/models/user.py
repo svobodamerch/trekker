@@ -32,6 +32,9 @@ class User(SQLModel, table=True):
     community_posts: list["CommunityPost"] = Relationship(back_populates="user")
     community_comments: list["CommunityComment"] = Relationship(back_populates="user")
     community_reactions: list["CommunityReaction"] = Relationship(back_populates="user")
+    
+    # Daily 10 Goals (Brian Tracy)
+    daily_goals: list["DailyTenGoals"] = Relationship(back_populates="user")
 
 
 class UserSettings(SQLModel, table=True):

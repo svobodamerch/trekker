@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { SoftCard } from '../components/SoftCard'
 import { listGoals, type GoalsByHorizon, type Goal } from '../api/goals'
 import { getGoalsNeedingReview, reviewGoal, type GoalsNeedingReview } from '../api/goalReview'
+import { saveTodayGoals, getGoalsHistory, type DailyGoalsHistory } from '../api/dailyGoals'
 
 const HORIZON_LABELS: Record<string, string> = {
   month: '1 месяц',
@@ -40,11 +41,26 @@ export function GoalsPage() {
     next_week_step: '',
   })
   const [savingReview, setSavingReview] = useState(false)
+  
+  // Daily 10 Goals (Brian Tracy)
+  const [dailyGoals, setDailyGoals] = useState<DailyGoalsHistory | null>(null)
+  const [dailyGoalsInput, setDailyGoalsInput] = useState<string[]>(Array(10).fill(''))
+  const [savingDaily, setSavingDaily] = useState(false)
+  const [showAboutPractice, setShowAboutPractice] = useState(false)
+  const [showDailyArchive, setShowDailyArchive] = useState(false)
 
   useEffect(() => {
     Promise.all([
       listGoals().then((data) => setGoals(data)),
       getGoalsNeedingReview().then((data) => setNeedsReview(data)),
+      getGoalsHistory().then((data) => {
+        setDailyGoals(data)
+        if (data.today && data.today.goals && data.today.goals.length > 0) {
+          const goals = [...data.today.goals]
+          while (goals.length < 10) goals.push('')
+          setDailyGoalsInput(goals.slice(0, 10))
+        }
+      }),
     ])
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -285,6 +301,79 @@ export function GoalsPage() {
           </div>
         )}
 
+        {/* Daily 10 Goals (Brian Tracy Technique) */}
+        <SoftCard className="p-4 bg-gradient-to-br from-amber-50 to-orange-50 border-amber-100">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">📝</span>
+              <h3 className="font-semibold text-amber-900">10 целей ежедневно</h3>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowAboutPractice(true)}
+                className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-lg hover:bg-amber-200"
+              >
+                О практике
+              </button>
+              {dailyGoals?.archive && dailyGoals.archive.length > 0 && (
+                <button
+                  onClick={() => setShowDailyArchive(true)}
+                  className="text-xs bg-white text-amber-700 px-2 py-1 rounded-lg border border-amber-200 hover:bg-amber-50"
+                >
+                  Архив ({dailyGoals.archive.length})
+                </button>
+              )}
+            </div>
+          </div>
+          
+          {dailyGoals && dailyGoals.streak_days > 0 && (
+            <p className="text-xs text-amber-600 mb-3">
+              🔥 Серия: {dailyGoals.streak_days} {dailyGoals.streak_days === 1 ? 'день' : dailyGoals.streak_days < 5 ? 'дня' : 'дней'} подряд
+            </p>
+          )}
+          
+          <p className="text-xs text-amber-600 mb-3">
+            Запиши 10 целей по памяти, не подглядывая вчерашние. Формулируй в настоящем времени: «Я...»
+          </p>
+          
+          <div className="space-y-2">
+            {dailyGoalsInput.map((goal, index) => (
+              <div key={index} className="flex gap-2">
+                <span className="text-xs text-amber-400 w-5 pt-2">{index + 1}.</span>
+                <input
+                  type="text"
+                  value={goal}
+                  onChange={(e) => {
+                    const newGoals = [...dailyGoalsInput]
+                    newGoals[index] = e.target.value
+                    setDailyGoalsInput(newGoals)
+                  }}
+                  placeholder={`Цель ${index + 1}...`}
+                  className="flex-1 px-3 py-2 text-sm bg-white border border-amber-200 rounded-lg focus:border-amber-400 focus:outline-none"
+                />
+              </div>
+            ))}
+          </div>
+          
+          <button
+            onClick={async () => {
+              setSavingDaily(true)
+              try {
+                const result = await saveTodayGoals(dailyGoalsInput.filter(g => g.trim()))
+                setDailyGoals(prev => prev ? { ...prev, today: result } : null)
+              } catch (e) {
+                console.error('Failed to save daily goals:', e)
+              } finally {
+                setSavingDaily(false)
+              }
+            }}
+            disabled={savingDaily}
+            className="w-full mt-4 py-3 bg-amber-500 text-white rounded-xl font-medium hover:bg-amber-600 disabled:opacity-50"
+          >
+            {savingDaily ? 'Сохраняю...' : '💾 Сохранить 10 целей'}
+          </button>
+        </SoftCard>
+
         <div className="fixed bottom-6 left-4 right-4 max-w-md mx-auto">
           <button
             onClick={() => navigate('/goals/new')}
@@ -293,6 +382,121 @@ export function GoalsPage() {
             Добавить цель
           </button>
         </div>
+
+        {/* About Practice Modal */}
+        {showAboutPractice && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-y-auto">
+              <div className="p-4 border-b border-soft-200 flex items-center justify-between">
+                <h3 className="font-semibold text-soft-800">Техника 10 целей Брайана Трейси</h3>
+                <button
+                  onClick={() => setShowAboutPractice(false)}
+                  className="text-soft-400 hover:text-soft-600"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="p-4 space-y-4 text-sm text-soft-600">
+                <p className="font-medium text-soft-800">
+                  Готовы ли Вы переучить свой мозг думать целями на протяжении 30 дней?
+                </p>
+                <p>
+                  Хочу поделиться с Вам очень простой, но очень эффективной техникой, которая скорее не про мечтания, а про то, что можно научить себя ставить цели, обдумывать цели, повышать свою эффективность, да и просто, понимать, чего ты хочешь на самом деле.
+                </p>
+                <div>
+                  <p className="font-medium text-soft-800 mb-2">Немного о технике Трейси 10 целей:</p>
+                  <p>
+                    Метод «10 целей» направлен на то, чтобы наши стремления становились частью подсознательной системы фильтрации.
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-soft-800 mb-2">Ключевое правило:</p>
+                  <p>
+                    Каждый день ты записываешь 10 целей, которые хочешь реализовать. Ключевой – пишешь каждый день заново, не подглядывая в записи предыдущего дня, то есть – по памяти. В идеале записи нужно делать утром.
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-soft-800 mb-2">Правило 3-х «П»:</p>
+                  <ul className="space-y-1 ml-4">
+                    <li>• <strong>Positive (Позитивно):</strong> без частицы «не» — «Я вешу 70 кг» вместо «Я не толстый»</li>
+                    <li>• <strong>Present (Настоящее):</strong> так, будто цель уже достигнута — «Я зарабатываю...», «Я пишу...»</li>
+                    <li>• <strong>Personal (Личное):</strong> начинай со слова «Я» — прямая команда подсознанию</li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-medium text-soft-800 mb-2">Пошаговая инструкция:</p>
+                  <ol className="space-y-1 ml-4 list-decimal">
+                    <li>Выбери время, лучше всего утро</li>
+                    <li>Пиши 10 целей каждое утро</li>
+                    <li>Главный секрет: не подглядывать вчерашние записи</li>
+                    <li>Повторяй 30 дней</li>
+                  </ol>
+                </div>
+                <div>
+                  <p className="font-medium text-soft-800 mb-2">Что дает этот метод?</p>
+                  <ul className="space-y-1 ml-4">
+                    <li>• <strong>Уточнение:</strong> цели становятся более конкретными</li>
+                    <li>• <strong>Фокус:</strong> мозг начинает автоматически искать возможности</li>
+                    <li>• <strong>Приоритетность:</strong> быстро понимаешь главную цель</li>
+                  </ul>
+                </div>
+                <p className="text-xs text-soft-400 italic pt-2 border-t border-soft-100">
+                  Через 10–14 дней ты начинаешь видеть, как меняется фокус. Через месяц многие отмечают, что цели становятся яснее и понятнее.
+                </p>
+              </div>
+              <div className="p-4 border-t border-soft-200">
+                <button
+                  onClick={() => setShowAboutPractice(false)}
+                  className="w-full py-3 bg-soft-600 text-white rounded-xl font-medium"
+                >
+                  Понятно, начну писать цели
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Archive Modal */}
+        {showDailyArchive && dailyGoals?.archive && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-y-auto">
+              <div className="p-4 border-b border-soft-200 flex items-center justify-between">
+                <h3 className="font-semibold text-soft-800">Архив 10 целей</h3>
+                <button
+                  onClick={() => setShowDailyArchive(false)}
+                  className="text-soft-400 hover:text-soft-600"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="p-4 space-y-4">
+                {dailyGoals.archive.map((entry) => (
+                  <div key={entry.id} className="bg-soft-50 rounded-xl p-3">
+                    <p className="text-xs text-soft-400 mb-2">
+                      {new Date(entry.goal_date).toLocaleDateString('ru-RU')}
+                    </p>
+                    <ol className="space-y-1 text-sm text-soft-700">
+                      {entry.goals.filter(g => g).map((goal, i) => (
+                        <li key={i} className="flex gap-2">
+                          <span className="text-soft-400">{i + 1}.</span>
+                          <span>{goal}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ))}
+              </div>
+              <div className="p-4 border-t border-soft-200">
+                <button
+                  onClick={() => setShowDailyArchive(false)}
+                  className="w-full py-3 bg-soft-600 text-white rounded-xl font-medium"
+                >
+                  Закрыть
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
