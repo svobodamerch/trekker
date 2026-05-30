@@ -317,3 +317,29 @@ async def on_feedback_prompt(callback: types.CallbackQuery):
     """Show feedback prompt."""
     await cmd_feedback(callback.message)
     await callback.answer()
+
+
+@router.message(Command("ai"))
+async def cmd_ai(message: types.Message):
+    """Trigger AI analysis of all user entries."""
+    ai_text = (
+        "🔮 *AI-анализ записей*\n\n"
+        "Эта функция анализирует все твои записи через Claude AI и находит:\n"
+        "• Ключевые паттерны в твоём состоянии\n"
+        "• Эмоциональную динамику во времени\n"
+        "• Повторяющиеся телесные сигналы\n"
+        "• Темы инсайтов и осознаний\n"
+        "• Связь между записями и целями\n"
+        "• Мягкие рекомендации на основе данных\n\n"
+        "Минимум для анализа: 5 записей.\n\n"
+        "👉 Открой Mini App и нажми кнопку *🔮 AI-анализ* на главной странице."
+    )
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="📝 Открыть приложение",
+            web_app=types.WebAppInfo(url=get_mini_app_url("/"))
+        )]
+    ])
+    
+    await message.answer(ai_text, reply_markup=keyboard, parse_mode="Markdown")
