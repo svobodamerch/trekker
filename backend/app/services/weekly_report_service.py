@@ -309,39 +309,106 @@ class WeeklyReportService:
         
         return report
     
-    async def generate_all_reports(self, target_date: date = None):
+    async def generate_all_reports(self, target_date: date = None, send_via_telegram: bool = True):
         """Generate reports for all users and community for the given week."""
+        from app.config import settings
+        import httpx
+        from datetime import datetime
+
         week_start, week_end = self.get_week_boundaries(target_date)
-        
+
         # Check if already generated
         existing = self.db.query(CommunityWeeklyReport).filter(
             CommunityWeeklyReport.week_start == week_start
         ).first()
-        
+
         if existing:
             return existing
-        
+
         # Generate community report first
         community_report = await self.generate_community_report(week_start, week_end)
-        
+
+        # Post community report to feed
+        await self._post_community_report(community_report)
+
         # Get all users
         users = self.db.query(User).all()
-        
-        # Generate individual reports
+
+        # Generate and optionally send individual reports
         for user in users:
             # Check if user already has report for this week
             existing_user_report = self.db.query(WeeklyReport).filter(
                 WeeklyReport.user_id == user.id,
                 WeeklyReport.week_start == week_start,
             ).first()
-            
+
             if not existing_user_report:
                 try:
-                    await self.generate_user_report(user, week_start, week_end)
+                    report = await self.generate_user_report(user, week_start, week_end)
+
+                    # Send via Telegram if configured
+                    if send_via_telegram and settings.bot_token and user.telegram_user_id:
+                        try:
+                            await self._send_report_via_telegram(
+                                settings.bot_token,
+                                user.telegram_user_id,
+                                report
+                            )
+                            report.sent_at = datetime.utcnow()
+                            self.db.commit()
+                        except Exception as e:
+                            print(f"Failed to send report to user {user.id}: {e}")
+
                 except Exception as e:
                     print(f"Failed to generate report for user {user.id}: {e}")
-        
+
         return community_report
+
+    async def _send_report_via_telegram(self, bot_token: str, chat_id: str, report: WeeklyReport):
+        """Send user report via Telegram Bot API."""
+        import httpx
+
+        text = self.format_user_report_for_bot(report)
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                json={
+                    "chat_id": chat_id,
+                    "text": text,
+                    "parse_mode": "Markdown",
+                },
+                timeout=30.0
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    async def _post_community_report(self, report: CommunityWeeklyReport):
+        """Post community report as system post in community feed."""
+        from app.models.community import CommunityPost
+
+        title, body = self.format_community_report_for_post(report)
+
+        try:
+            post = CommunityPost(
+                user_id=None,  # System post
+                title=title,
+                body=body,
+                visibility="named",
+                is_weekly_report=True,
+                source_type="weekly_report",
+            )
+            self.db.add(post)
+            self.db.commit()
+            self.db.refresh(post)
+
+            report.community_post_id = post.id
+            self.db.commit()
+
+            print(f"Posted community weekly report as post {post.id}")
+
+        except Exception as e:
+            print(f"Failed to post community report: {e}")
     
     def format_user_report_for_bot(self, report: WeeklyReport) -> str:
         """Format report for Telegram bot message."""

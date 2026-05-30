@@ -13,7 +13,8 @@ class Settings(BaseSettings):
     ai_api_key: str = ""
     ai_model: str = ""
     cors_origins: str = ""
-    admin_secret: str = ""
+    admin_secret: str = ""  # For admin endpoints
+    admin_api_key: str = ""  # For bot-to-backend API authentication
     groq_api_key: str = ""  # For Whisper voice transcription
 
     class Config:

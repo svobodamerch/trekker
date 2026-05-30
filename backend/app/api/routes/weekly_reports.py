@@ -1,38 +1,48 @@
 """API routes for weekly reports (admin/trigger endpoints)."""
 from datetime import date
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Header
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_current_user
 from app.models import User, WeeklyReport, CommunityWeeklyReport
 from app.services.weekly_report_service import WeeklyReportService
+from app.config import settings
 
 router = APIRouter(prefix="/weekly-reports", tags=["weekly-reports"])
+
+
+def verify_admin_key(x_admin_key: Optional[str] = Header(None)):
+    """Verify admin API key for bot-to-backend communication."""
+    if not settings.admin_api_key:
+        raise HTTPException(status_code=501, detail="Admin API not configured")
+    if x_admin_key != settings.admin_api_key:
+        raise HTTPException(status_code=401, detail="Invalid admin key")
+    return True
 
 
 @router.post("/generate")
 async def trigger_report_generation(
     background_tasks: BackgroundTasks,
     target_date: date = None,
+    send_via_telegram: bool = True,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _: bool = Depends(verify_admin_key),
 ):
-    """Trigger generation of weekly reports (admin only)."""
-    # In production, check if user is admin
-    # For now, allow any authenticated user to trigger
-    
+    """Trigger generation of weekly reports (admin only, called by bot)."""
+
     service = WeeklyReportService(db)
-    
+
     # Run in background to avoid timeout
     async def generate():
-        await service.generate_all_reports(target_date)
-    
+        await service.generate_all_reports(target_date, send_via_telegram=send_via_telegram)
+
     background_tasks.add_task(generate)
-    
+
     return {
         "message": "Report generation started",
         "week": service.get_week_boundaries(target_date),
+        "send_via_telegram": send_via_telegram,
     }
 
 

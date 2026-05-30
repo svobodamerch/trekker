@@ -8,13 +8,14 @@ from sqlmodel import SQLModel, Field, Relationship
 class CommunityPost(SQLModel, table=True):
     """Public posts in the support circle."""
     __tablename__ = "community_posts"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="users.id", index=True)
-    
+    user_id: Optional[int] = Field(foreign_key="users.id", index=True, default=None)
+
     # Source tracking (optional - can be manual post)
-    source_type: str = Field(default="custom")  # pulse, goal, dream_life, life_balance, custom
+    source_type: str = Field(default="custom")  # pulse, goal, dream_life, life_balance, custom, weekly_report
     source_id: Optional[int] = Field(default=None)
+    is_weekly_report: bool = Field(default=False)
     
     # Content
     title: Optional[str] = Field(default=None)
@@ -30,7 +31,7 @@ class CommunityPost(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
-    user: Optional["User"] = Relationship(back_populates="community_posts")
+    user: Optional["User"] = Relationship(back_populates="community_posts", sa_relationship_kwargs={"foreign_keys": "CommunityPost.user_id"})
     comments: List["CommunityComment"] = Relationship(back_populates="post")
     reactions: List["CommunityReaction"] = Relationship(back_populates="post")
 

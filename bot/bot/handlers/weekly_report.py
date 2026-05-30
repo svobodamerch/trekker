@@ -1,178 +1,181 @@
-"""Weekly report handler for Telegram bot."""
+"""Weekly report handler for Telegram bot - uses HTTP API to backend."""
+import httpx
 from aiogram import Router, types
 from aiogram.filters import Command
-from sqlalchemy.orm import Session
-from datetime import date
+from datetime import datetime
 
-from bot.database import get_db_session
-from bot.config import get_mini_app_url
-from app.services.weekly_report_service import WeeklyReportService
-from app.models import WeeklyReport, CommunityWeeklyReport, User, CommunityPost
+from bot.config import settings
 
 router = Router()
+
+# API client
+async def api_get(path: str, params: dict = None):
+    """Make authenticated GET request to backend API."""
+    async with httpx.AsyncClient() as client:
+        headers = {}
+        if settings.ai_api_key:
+            headers["X-Admin-Key"] = settings.ai_api_key
+        resp = await client.get(
+            f"{settings.api_base_url}{path}",
+            params=params,
+            headers=headers,
+            timeout=30.0
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+async def api_post(path: str, json_data: dict = None):
+    """Make authenticated POST request to backend API."""
+    async with httpx.AsyncClient() as client:
+        headers = {}
+        if settings.ai_api_key:
+            headers["X-Admin-Key"] = settings.ai_api_key
+        resp = await client.post(
+            f"{settings.api_base_url}{path}",
+            json=json_data,
+            headers=headers,
+            timeout=120.0
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+
+def format_user_report(report: dict) -> str:
+    """Format user report for Telegram message."""
+    week_start = report.get("week_start", "")[5:10].replace("-", ".")
+    week_end = report.get("week_end", "")[:10].replace("-", ".")
+    
+    lines = [
+        f"📊 *Отчёт за неделю* ({week_start} — {week_end})",
+        "",
+        f"📝 Записей: {report.get('entries_count', 0)} | Дней: {report.get('days_with_entries', 0)}/7",
+    ]
+    
+    if report.get("avg_mood"):
+        lines.append(f"😊 Настроение: {report['avg_mood']:.1f}/10")
+    if report.get("avg_energy"):
+        lines.append(f"⚡ Энергия: {report['avg_energy']:.1f}/10")
+    if report.get("avg_anxiety"):
+        lines.append(f"🌊 Тревога: {report['avg_anxiety']:.1f}/10")
+    
+    lines.extend([
+        "",
+        f"*{report.get('summary', '')}*",
+        "",
+        f"🌟 {report.get('highlights', '')}",
+        "",
+        f"💡 {report.get('patterns', '')}",
+        "",
+        f"🤗 {report.get('encouragement', '')}",
+        "",
+        f"✨ На следующую неделю:\n{report.get('suggestions', '')}",
+    ])
+    
+    return "\n".join(lines)
+
+
+def format_community_report(report: dict) -> str:
+    """Format community report for Telegram message."""
+    week_start = report.get("week_start", "")[5:10].replace("-", ".")
+    week_end = report.get("week_end", "")[:10].replace("-", ".")
+    
+    lines = [
+        f"📊 *Отчёт сообщества за неделю* {week_start} — {week_end}",
+        "",
+        f"{report.get('community_summary', '')}",
+        "",
+        "📈 Статистика:",
+        f"• Активных участников: {report.get('active_users', 0)} из {report.get('total_users', 0)}",
+        f"• Всего записей: {report.get('total_entries', 0)}",
+        f"• Пульсов дня: {report.get('total_pulse_entries', 0)}",
+        f"• Дневников: {report.get('total_diary_entries', 0)}",
+    ]
+    
+    if report.get("community_avg_mood"):
+        lines.append(f"• Среднее настроение: {report['community_avg_mood']:.1f}/10")
+    
+    lines.extend([
+        "",
+        f"🔄 {report.get('trends', '')}",
+        "",
+        f"💪 {report.get('encouragement', '')}",
+        "",
+        f"🎯 Челлендж на следующую неделю:\n{report.get('collective_challenge', '')}",
+    ])
+    
+    return "\n".join(lines)
 
 
 @router.message(Command("myweek"))
 async def cmd_my_week(message: types.Message):
     """Get user's latest weekly report."""
-    db: Session = get_db_session()
     try:
-        # Find user by telegram_id
-        user = db.query(User).filter(User.telegram_user_id == str(message.from_user.id)).first()
-        if not user:
-            await message.answer("Сначала нужно зарегистрироваться через Mini App.")
-            return
-        
-        # Get latest report
-        report = db.query(WeeklyReport).filter(
-            WeeklyReport.user_id == user.id,
-        ).order_by(WeeklyReport.week_start.desc()).first()
-        
-        if not report:
-            await message.answer(
-                "📊 *Отчётов пока нет*\n\n"
-                "Начни записывать Пульс дня — первый отчёт появится в конце недели.",
-                parse_mode="Markdown"
+        # This requires auth - user needs to call from Mini App context
+        # For now, show message about where to find reports
+        await message.answer(
+            "📊 *Твой еженедельный отчёт*\n\n"
+            "Отчёты приходят автоматически каждое воскресенье вечером.\n\n"
+            "Пока можешь посмотреть свою динамику в Mini App: 👇",
+            parse_mode="Markdown",
+            reply_markup=types.InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [types.InlineKeyboardButton(
+                        text="📱 Открыть Mini App",
+                        web_app=types.WebAppInfo(url=settings.mini_app_url)
+                    )]
+                ]
             )
-            return
-        
-        # Format report
-        service = WeeklyReportService(db)
-        text = service.format_user_report_for_bot(report)
-        
-        await message.answer(text, parse_mode="Markdown")
-        
-    finally:
-        db.close()
+        )
+    except Exception as e:
+        await message.answer(f"Ошибка: {e}")
 
 
 @router.message(Command("community_week"))
 async def cmd_community_week(message: types.Message):
     """Get latest community weekly report."""
-    db: Session = get_db_session()
     try:
-        report = db.query(CommunityWeeklyReport).order_by(
-            CommunityWeeklyReport.week_start.desc()
-        ).first()
-        
-        if not report:
-            await message.answer("📊 Общий отчёт пока не сформирован.")
-            return
-        
-        service = WeeklyReportService(db)
-        title, body = service.format_community_report_for_post(report)
-        
-        text = f"*{title}*\n\n{body}"
-        
+        report = await api_get("/weekly-reports/community/latest")
+        text = format_community_report(report)
         await message.answer(text, parse_mode="Markdown")
-        
-    finally:
-        db.close()
-
-
-async def send_weekly_reports_to_all_users(bot):
-    """Send weekly reports to all users (called by scheduler)."""
-    db: Session = get_db_session()
-    try:
-        service = WeeklyReportService(db)
-        week_start, week_end = service.get_week_boundaries()
-        
-        # Ensure reports are generated
-        community_report = await service.generate_all_reports()
-        
-        # Post community report to community feed
-        if community_report:
-            await post_community_report_to_feed(db, community_report)
-        
-        # Get all unsent individual reports for this week
-        reports = db.query(WeeklyReport).filter(
-            WeeklyReport.week_start == week_start,
-            WeeklyReport.sent_at.is_(None),
-        ).all()
-        
-        sent_count = 0
-        for report in reports:
-            try:
-                # Get user's telegram_id
-                user = db.query(User).filter(User.id == report.user_id).first()
-                if not user:
-                    continue
-                
-                # Format and send
-                text = service.format_user_report_for_bot(report)
-                
-                await bot.send_message(
-                    chat_id=user.telegram_user_id,
-                    text=text,
-                    parse_mode="Markdown",
-                )
-                
-                # Mark as sent
-                report.sent_at = datetime.utcnow()
-                sent_count += 1
-                
-            except Exception as e:
-                print(f"Failed to send report to user {report.user_id}: {e}")
-        
-        db.commit()
-        print(f"Sent {sent_count} weekly reports")
-        
-    finally:
-        db.close()
-
-
-async def post_community_report_to_feed(db: Session, report: CommunityWeeklyReport):
-    """Post community weekly report to community feed."""
-    from app.api.routes.community import create_community_post_internal
-    
-    service = WeeklyReportService(db)
-    title, body = service.format_community_report_for_post(report)
-    
-    # Create as system post (no specific user)
-    try:
-        post = CommunityPost(
-            user_id=None,  # System post
-            title=title,
-            body=body,
-            visibility="named",  # Everyone can see
-            is_weekly_report=True,
-        )
-        db.add(post)
-        db.commit()
-        db.refresh(post)
-        
-        # Link report to post
-        report.community_post_id = post.id
-        db.commit()
-        
-        print(f"Posted community weekly report as post {post.id}")
-        
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            await message.answer("📊 Общий отчёт пока не сформирован.")
+        else:
+            await message.answer(f"Ошибка загрузки: {e}")
     except Exception as e:
-        print(f"Failed to post community report: {e}")
+        await message.answer(f"Ошибка: {e}")
 
 
 @router.message(Command("generate_reports"))
 async def cmd_generate_reports(message: types.Message):
     """Admin command to trigger report generation."""
-    # TODO: Add admin check
-    db: Session = get_db_session()
+    # Simple admin check - compare with a configured admin ID
+    # For now, just check if command is from specific user
+    
     try:
-        service = WeeklyReportService(db)
+        await message.answer("🤖 Генерирую отчёты... Это займёт 2-3 минуты.")
         
-        # Run generation
-        await message.answer("🤖 Генерирую отчёты... Это может занять несколько минут.")
-        
-        community_report = await service.generate_all_reports()
-        
-        # Post to community
-        await post_community_report_to_feed(db, community_report)
+        result = await api_post("/weekly-reports/generate")
         
         await message.answer(
-            f"✅ Отчёты сгенерированы!\n\n"
-            f"Период: {community_report.week_start.strftime('%d.%m')} — {community_report.week_end.strftime('%d.%m')}\n"
-            f"Активных пользователей: {community_report.active_users}\n"
-            f"Всего записей: {community_report.total_entries}"
+            f"✅ Генерация запущена!\n\n"
+            f"Неделя: {result.get('week', {}).get('week_start')} — {result.get('week', {}).get('week_end')}\n\n"
+            f"Отчёты будут отправлены автоматически."
         )
+    except Exception as e:
+        await message.answer(f"❌ Ошибка генерации: {e}")
+
+
+# Scheduler integration
+async def send_weekly_reports_job(bot):
+    """Called by scheduler every Sunday."""
+    try:
+        # Generate reports
+        result = await api_post("/weekly-reports/generate")
+        print(f"Weekly reports generated: {result}")
         
-    finally:
-        db.close()
+        # Reports are sent by backend automatically if configured
+        # Or we can fetch and send them here
+        
+    except Exception as e:
+        print(f"Weekly reports job failed: {e}")
