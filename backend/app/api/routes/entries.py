@@ -132,15 +132,17 @@ def home_summary(
             latest_entry_preview=None,
         )
 
-    # Calculate days since last entry
+    # Calculate time since last entry
     now = datetime.utcnow()
     last_entry_date = latest_entry.created_at
+    hours_diff = (now - last_entry_date).total_seconds() / 3600
     days_diff = (now - last_entry_date).days
 
     # Determine return state
-    if days_diff == 0:
+    # Consider "today" if entry is less than 4 hours old (handles timezone issues)
+    if hours_diff < 4:
         return_state = "active_today"
-    elif days_diff == 1:
+    elif days_diff == 0 or days_diff == 1:
         return_state = "one_day_gap"
     elif days_diff >= 7:
         return_state = "long_pause"

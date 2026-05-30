@@ -13,6 +13,13 @@ export interface VoiceProcessResult {
     title?: string
     horizon?: string
   }
+  data?: {
+    body_state?: string
+    insight?: string
+    gratitude?: string
+    tomorrow_commitment?: string
+    today_moment?: string
+  }
   parsed: boolean
 }
 

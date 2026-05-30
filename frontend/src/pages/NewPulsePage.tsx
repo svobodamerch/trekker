@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ScaleInput } from '../components/ScaleInput'
+import { SliderInput } from '../components/SliderInput'
 import { TextArea } from '../components/TextArea'
 import { createEntry } from '../api/entries'
 import { processVoiceRecording } from '../api/voice'
@@ -82,12 +82,17 @@ export function NewPulsePage() {
       const result = await processVoiceRecording(audioBlob)
 
       if (result.success && result.recognized_type === 'entry') {
-        // Fill form with voice data
+        // Fill form with voice data - both numbers and text fields
         setForm(prev => ({
           ...prev,
           mood: result.created.mood ?? prev.mood,
           energy: result.created.energy ?? prev.energy,
           anxiety: result.created.anxiety ?? prev.anxiety,
+          // AI extracts these from voice too
+          body_state: result.data?.body_state || prev.body_state,
+          insight: result.data?.insight || prev.insight,
+          gratitude: result.data?.gratitude || prev.gratitude,
+          tomorrow_commitment: result.data?.tomorrow_commitment || prev.tomorrow_commitment,
         }))
         setVoicePreview(result.transcript)
       } else if (result.success && result.recognized_type === 'goal') {
@@ -131,7 +136,7 @@ export function NewPulsePage() {
     <div className="min-h-screen p-4">
       <div className="max-w-md mx-auto">
         <h1 className="text-xl font-semibold text-soft-800 mb-6">
-          Новый Пульс
+          Пульс дня
         </h1>
 
         {/* Voice recording */}
@@ -227,23 +232,29 @@ export function NewPulsePage() {
           )}
         </div>
 
-        <div className="space-y-6">
-          <ScaleInput
+        <div className="space-y-8">
+          <SliderInput
             label="Настроение"
             value={form.mood}
-            onChange={(v) => setForm({ ...form, mood: v })}
+            onChange={(v: number) => setForm({ ...form, mood: v })}
+            leftLabel="Тяжело"
+            rightLabel="Отлично"
           />
 
-          <ScaleInput
+          <SliderInput
             label="Тревога"
             value={form.anxiety}
-            onChange={(v) => setForm({ ...form, anxiety: v })}
+            onChange={(v: number) => setForm({ ...form, anxiety: v })}
+            leftLabel="Спокойно"
+            rightLabel="Тревожно"
           />
 
-          <ScaleInput
+          <SliderInput
             label="Энергия"
             value={form.energy}
-            onChange={(v) => setForm({ ...form, energy: v })}
+            onChange={(v: number) => setForm({ ...form, energy: v })}
+            leftLabel="Нет сил"
+            rightLabel="Полный ресурс"
           />
 
           <TextArea

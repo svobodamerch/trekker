@@ -99,6 +99,7 @@ async def process_voice(
         "confidence": result.get("confidence", 0.5),
         "transcript": transcript,
         "created": created_obj,
+        "data": data,  # Include all extracted fields for frontend
         "parsed": result.get("parsed", False),
     }
 
