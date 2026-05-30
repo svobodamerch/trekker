@@ -180,6 +180,12 @@ export function HomePage() {
           >
             Цели и жизнь мечты
           </button>
+          <button
+            onClick={() => navigate('/community')}
+            className="py-3 bg-white border border-soft-200 rounded-xl text-soft-700 font-medium hover:border-soft-400 col-span-2"
+          >
+            🤗 Круг поддержки
+          </button>
         </div>
 
         <div className="bg-soft-50 rounded-xl p-4 text-sm text-soft-500 space-y-1">

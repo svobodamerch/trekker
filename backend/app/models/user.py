@@ -23,6 +23,10 @@ class User(SQLModel, table=True):
     ai_analyses: list["AIAnalysis"] = Relationship(back_populates="user")
     events: list["Event"] = Relationship(back_populates="user")
     reminder_logs: list["ReminderLog"] = Relationship(back_populates="user")
+    # Community Support Circle
+    community_posts: list["CommunityPost"] = Relationship(back_populates="user")
+    community_comments: list["CommunityComment"] = Relationship(back_populates="user")
+    community_reactions: list["CommunityReaction"] = Relationship(back_populates="user")
 
 
 class UserSettings(SQLModel, table=True):

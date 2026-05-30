@@ -9,6 +9,9 @@ import { GoalEditorPage } from './pages/GoalEditorPage'
 import { NewDiaryPage } from './pages/NewDiaryPage'
 import { FeedbackPage } from './pages/FeedbackPage'
 import { LifeBalancePage } from './pages/LifeBalancePage'
+import { CommunityPage } from './pages/CommunityPage'
+import { CommunityPostPage } from './pages/CommunityPostPage'
+import { CommunityNewPostPage } from './pages/CommunityNewPostPage'
 import { authenticateWithTelegram } from './telegram/init'
 import { isAuthenticated, clearAuthToken } from './utils/auth'
 
@@ -93,6 +96,9 @@ function App() {
         <Route path="/diary" element={<NewDiaryPage />} />
         <Route path="/feedback" element={<FeedbackPage />} />
         <Route path="/life-balance" element={<LifeBalancePage />} />
+        <Route path="/community" element={<CommunityPage />} />
+        <Route path="/community/post/:id" element={<CommunityPostPage />} />
+        <Route path="/community/new" element={<CommunityNewPostPage />} />
       </Routes>
     </BrowserRouter>
   )

@@ -7,6 +7,7 @@ from app.models.event import Event
 from app.models.reminder import ReminderLog
 from app.models.feedback import FeedbackMessage
 from app.models.life_balance import LifeBalanceSnapshot, LifeBalanceScore
+from app.models.community import CommunityPost, CommunityComment, CommunityReaction, CommunityReport
 
 __all__ = [
     "User",
@@ -22,4 +23,9 @@ __all__ = [
     "FeedbackMessage",
     "LifeBalanceSnapshot",
     "LifeBalanceScore",
+    # Community Support Circle
+    "CommunityPost",
+    "CommunityComment",
+    "CommunityReaction",
+    "CommunityReport",
 ]
