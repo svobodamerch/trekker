@@ -1,9 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SliderInput } from '../components/SliderInput'
 import { TextArea } from '../components/TextArea'
 import { createEntry } from '../api/entries'
-import { processVoiceRecording } from '../api/voice'
 
 export function NewPulsePage() {
   const navigate = useNavigate()
@@ -20,165 +19,6 @@ export function NewPulsePage() {
 
   const canSave = form.mood !== undefined && form.anxiety !== undefined && form.energy !== undefined
 
-  // Voice recording state
-  const [isRecording, setIsRecording] = useState(false)
-  const [isProcessingVoice, setIsProcessingVoice] = useState(false)
-  const [voicePreview, setVoicePreview] = useState<string | null>(null)
-  const [recordingStep, setRecordingStep] = useState(0)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioChunksRef = useRef<Blob[]>([])
-  const streamRef = useRef<MediaStream | null>(null)
-
-  // Voice guidance questions - text fields only (no numbers)
-  const voiceQuestions = [
-    { emoji: '🎯', question: 'Что в теле сейчас?', hint: 'Напряжение, расслабленность, ощущения...' },
-    { emoji: '💡', question: 'Главный инсайт дня?', hint: 'Что осознал сегодня?' },
-    { emoji: '🙏', question: 'За что благодарен?', hint: 'Маленькие или большие вещи...' },
-    { emoji: '📍', question: 'Момент осознанности?', hint: 'Когда был "здесь и сейчас"?' },
-    { emoji: '🌅', question: 'Обязательство на завтра?', hint: 'Одно конкретное действие...' },
-  ]
-
-  // Audio visualization refs
-  const audioContextRef = useRef<AudioContext | null>(null)
-  const analyserRef = useRef<AnalyserNode | null>(null)
-  const animationRef = useRef<number | null>(null)
-  const [audioData, setAudioData] = useState<number[]>(new Array(12).fill(10))
-
-  // Real-time audio visualization
-  const startAudioVisualization = (stream: MediaStream) => {
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-      const analyser = audioContext.createAnalyser()
-      const source = audioContext.createMediaStreamSource(stream)
-      
-      source.connect(analyser)
-      analyser.fftSize = 64
-      analyser.smoothingTimeConstant = 0.8
-      
-      audioContextRef.current = audioContext
-      analyserRef.current = analyser
-      
-      const dataArray = new Uint8Array(analyser.frequencyBinCount)
-      
-      const animate = () => {
-        if (!analyserRef.current) return
-        
-        analyserRef.current.getByteFrequencyData(dataArray)
-        
-        // Take 12 samples from the frequency data
-        const samples = []
-        const step = Math.floor(dataArray.length / 12)
-        for (let i = 0; i < 12; i++) {
-          const value = dataArray[i * step] || 0
-          // Scale to 10-100 range for visual
-          samples.push(Math.max(10, Math.min(100, value)))
-        }
-        
-        setAudioData(samples)
-        animationRef.current = requestAnimationFrame(animate)
-      }
-      
-      animate()
-    } catch (e) {
-      console.log('Audio visualization not supported, using fallback')
-      // Fallback: random animation
-      const fallbackAnimate = () => {
-        setAudioData(new Array(12).fill(0).map(() => 20 + Math.random() * 60))
-        animationRef.current = requestAnimationFrame(fallbackAnimate)
-      }
-      fallbackAnimate()
-    }
-  }
-  
-  const stopAudioVisualization = () => {
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current)
-      animationRef.current = null
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close()
-      audioContextRef.current = null
-    }
-    analyserRef.current = null
-    setAudioData(new Array(12).fill(10))
-  }
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      streamRef.current = stream
-      const mediaRecorder = new MediaRecorder(stream)
-      mediaRecorderRef.current = mediaRecorder
-      audioChunksRef.current = []
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data)
-        }
-      }
-
-      mediaRecorder.onstop = async () => {
-        stopAudioVisualization()
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/ogg' })
-        await handleVoiceProcessing(audioBlob)
-        // Stop all tracks
-        stream.getTracks().forEach(track => track.stop())
-        streamRef.current = null
-      }
-
-      mediaRecorder.start()
-      setIsRecording(true)
-      setRecordingStep(0)
-      
-      // Start real-time visualization
-      startAudioVisualization(stream)
-    } catch (err) {
-      alert('Не удалось получить доступ к микрофону. Проверь разрешения.')
-    }
-  }
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop()
-      setIsRecording(false)
-      setRecordingStep(0)
-      stopAudioVisualization()
-    }
-  }
-
-  const handleVoiceProcessing = async (audioBlob: Blob) => {
-    setIsProcessingVoice(true)
-    try {
-      const result = await processVoiceRecording(audioBlob)
-
-      if (result.success && result.recognized_type === 'entry') {
-        // Fill text fields only - numbers come from sliders, not voice
-        setForm(prev => ({
-          ...prev,
-          // Text fields from voice only
-          body_state: result.data?.body_state || result.created.body_state || prev.body_state,
-          insight: result.data?.insight || result.created.insight || prev.insight,
-          gratitude: result.data?.gratitude || result.created.gratitude || prev.gratitude,
-          tomorrow_commitment: result.data?.tomorrow_commitment || result.created.tomorrow_commitment || prev.tomorrow_commitment,
-          // Note: mood/energy/anxiety come from sliders, NOT from voice
-        }))
-        setVoicePreview(result.transcript)
-      } else if (result.success && result.recognized_type === 'goal') {
-        // Redirect to goals if voice was classified as goal
-        alert(`Распознана цель: "${result.created.title}". Перенаправляю в раздел целей.`)
-        navigate('/goals')
-        return
-      } else {
-        setVoicePreview(result.transcript || 'Голос не распознан')
-      }
-    } catch (err) {
-      console.error('Voice processing error:', err)
-      alert('Не удалось обработать голос. Попробуй ещё раз.')
-    } finally {
-      setIsProcessingVoice(false)
-    }
-  }
-
   const handleSave = async () => {
     if (!canSave) return
     setSaving(true)
@@ -191,8 +31,7 @@ export function NewPulsePage() {
         insight: form.insight || undefined,
         gratitude: form.gratitude || undefined,
         tomorrow_commitment: form.tomorrow_commitment || undefined,
-        raw_text: voicePreview || undefined,  // Include voice transcript if present
-        source: voicePreview ? 'voice' : 'mini_app',
+        source: 'mini_app',
       })
       navigate('/')
     } catch (err) {
@@ -233,23 +72,6 @@ export function NewPulsePage() {
             rightLabel="Полный ресурс"
           />
 
-          {/* Voice recording - TEMPORARILY DISABLED
-          <div className="py-4 border-t border-soft-200">
-            {!isRecording && !isProcessingVoice && !voicePreview && (
-              <button
-                onClick={startRecording}
-                className="w-full py-4 bg-soft-100 border-2 border-dashed border-soft-300 rounded-xl text-soft-600 flex items-center justify-center gap-2 hover:border-soft-500 hover:text-soft-700 hover:bg-soft-150 transition-colors"
-              >
-                <span className="text-2xl">🎤</span>
-                <span className="text-sm font-medium">Голосовой отчет — расскажи текстом</span>
-              </button>
-            )}
-
-            {isRecording && (...)}
-            {isProcessingVoice && (...)}
-            {voicePreview && (...)}
-          </div>
-          */}
 
           <TextArea
             label="Что сейчас в теле?"
