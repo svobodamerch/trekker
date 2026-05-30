@@ -1,11 +1,20 @@
 """
 AI Service for entry and goal analysis.
-Currently returns placeholder responses - requires AI_API_KEY for real implementation.
+Uses OpenAI when AI_API_KEY is configured, falls back to placeholder otherwise.
 """
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+import json
 from app.models import Entry, Goal
 from app.config import settings
+
+# Lazy import to avoid errors if openai not installed
+try:
+    from openai import AsyncOpenAI
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+    AsyncOpenAI = None
 
 
 class AIService:
@@ -165,12 +174,108 @@ class AIService:
         entries: List[Entry],
         goals: List[Goal],
     ) -> Dict[str, Any]:
-        """Real AI weekly reflection - to be implemented when AI key is present."""
-        # This will be implemented when connecting to OpenAI/Anthropic
-        # For now, return placeholder with flag
-        result = self._placeholder_weekly_reflection(entries, goals)
-        result["is_placeholder"] = False
-        result["note"] = "Real AI implementation pending - provider abstraction ready"
+        """Real AI weekly reflection using OpenAI."""
+        if not OPENAI_AVAILABLE or not self.api_key:
+            return self._placeholder_weekly_reflection(entries, goals)
+
+        try:
+            client = AsyncOpenAI(api_key=self.api_key)
+            prompt = self.build_weekly_prompt(entries, goals)
+
+            response = await client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "Ты мягкий помощник по самонаблюдению. Ты не психолог и не врач. Ты помогаешь пользователю заметить паттерны в своём состоянии без оценки и давления."},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.7,
+                max_tokens=800,
+            )
+
+            content = response.choices[0].message.content
+            if not content:
+                raise ValueError("Empty AI response")
+
+            # Parse structured response
+            result = self._parse_ai_response(content)
+            result["is_placeholder"] = False
+            result["raw_output"] = content  # For debugging
+            return result
+
+        except Exception as e:
+            # Fallback to placeholder on any error
+            print(f"AI error: {e}")
+            result = self._placeholder_weekly_reflection(entries, goals)
+            result["is_placeholder"] = True
+            result["error"] = str(e)
+            return result
+
+    def _parse_ai_response(self, content: str) -> Dict[str, Any]:
+        """Parse AI response into structured fields."""
+        # Default values
+        result = {
+            "patterns": "",
+            "energy_insights": "",
+            "goal_connections": "",
+            "next_week_question": "",
+            "next_week_focus": "",
+        }
+
+        # Try to extract sections by keywords
+        lines = content.split('\n')
+        current_key = None
+        buffer = []
+
+        for line in lines:
+            line_lower = line.lower().strip()
+
+            # Detect section headers
+            if 'повторялось' in line_lower or 'patterns' in line_lower:
+                if current_key and buffer:
+                    result[current_key] = ' '.join(buffer).strip()
+                current_key = "patterns"
+                buffer = []
+            elif 'энергия' in line_lower or 'energy' in line_lower:
+                if current_key and buffer:
+                    result[current_key] = ' '.join(buffer).strip()
+                current_key = "energy_insights"
+                buffer = []
+            elif 'цел' in line_lower or 'goals' in line_lower or 'связь' in line_lower:
+                if current_key and buffer:
+                    result[current_key] = ' '.join(buffer).strip()
+                current_key = "goal_connections"
+                buffer = []
+            elif 'вопрос' in line_lower or 'question' in line_lower:
+                if current_key and buffer:
+                    result[current_key] = ' '.join(buffer).strip()
+                current_key = "next_week_question"
+                buffer = []
+            elif 'фокус' in line_lower or 'focus' in line_lower:
+                if current_key and buffer:
+                    result[current_key] = ' '.join(buffer).strip()
+                current_key = "next_week_focus"
+                buffer = []
+            elif current_key:
+                # Skip markdown headers and empty lines
+                if line.strip() and not line.startswith('#'):
+                    buffer.append(line.strip())
+
+        # Save last section
+        if current_key and buffer:
+            result[current_key] = ' '.join(buffer).strip()
+
+        # Fill empty fields with defaults
+        if not result["patterns"]:
+            result["patterns"] = "За неделю проявились интересные паттерны. Смотри детали ниже."
+        if not result["energy_insights"]:
+            result["energy_insights"] = "Энергия колебалась — это нормально. Важно замечать, когда она выше или ниже."
+        if not result["goal_connections"]:
+            result["goal_connections"] = "Записи и цели связаны более тонко, чем кажется. AI поможет увидеть это при следующих отражениях."
+        if not result["next_week_question"]:
+            result["next_week_question"] = "Что одно хочется попробовать на следующей неделе?"
+        if not result["next_week_focus"]:
+            result["next_week_focus"] = "Продолжать записывать Пульс — этого достаточно."
+
         return result
 
     def build_weekly_prompt(
