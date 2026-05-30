@@ -153,6 +153,20 @@ export function NewPulsePage() {
 
           {isRecording && (
             <div className="py-6 px-4 bg-gradient-to-br from-soft-100 to-soft-200 rounded-2xl">
+              {/* Wave animation indicator */}
+              <div className="flex justify-center items-end gap-1 h-12 mb-4">
+                {[...Array(12)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="w-1.5 bg-soft-500 rounded-full animate-wave"
+                    style={{
+                      height: `${20 + Math.random() * 60}%`,
+                      animationDelay: `${i * 0.1}s`,
+                    }}
+                  />
+                ))}
+              </div>
+
               {/* Progress dots */}
               <div className="flex justify-center gap-1 mb-4">
                 {voiceQuestions.map((_, idx) => (
