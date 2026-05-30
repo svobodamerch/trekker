@@ -18,34 +18,56 @@ async def cmd_start(message: types.Message):
     """Main entry point - shows all navigation options."""
     welcome_text = (
         "Привет.\n\n"
-        "Я помогу тебе мягко наблюдать за состоянием и связывать каждый день с большими ориентирами.\n\n"
-        "Можно начать с короткого Пульса на 1 минуту: настроение, энергия, тревога, инсайт и один фокус на завтра.\n\n"
+        "Это приложение для мягкого самонаблюдения в Telegram.\n\n"
+        "Здесь можно:\n"
+        "• за 1 минуту записывать Пульс дня\n"
+        "• видеть динамику настроения, энергии и тревоги\n"
+        "• формулировать цели и «жизнь мечты»\n"
+        "• делать срез баланса жизни\n"
+        "• получать мягкие недельные отражения\n"
+        "• оставлять обратную связь и следить за развитием mini app\n\n"
+        "С чего начать:\n"
+        "1. Нажми «Открыть приложение»\n"
+        "2. Сделай первый Пульс\n"
+        "3. Если захочешь — добавь цель или срез баланса жизни\n\n"
         "Это ранняя тестовая версия. Приложение не является медицинской или психологической помощью."
     )
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(
-                text="📝 Записать Пульс",
+                text="📝 Открыть приложение",
+                web_app=types.WebAppInfo(url=get_mini_app_url("/"))
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="❓ Как пользоваться",
+                callback_data="show_help"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🆕 Что нового",
+                callback_data="show_updates"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="💬 Обратная связь",
+                callback_data="show_feedback"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🎯 Пульс дня",
                 web_app=types.WebAppInfo(url=get_mini_app_url("/pulse"))
             )
         ],
         [
             InlineKeyboardButton(
-                text="🎯 Мои цели",
+                text="� Цели и жизнь мечты",
                 web_app=types.WebAppInfo(url=get_mini_app_url("/goals"))
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text="📊 История",
-                web_app=types.WebAppInfo(url=get_mini_app_url("/history"))
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text="🏠 Главная",
-                web_app=types.WebAppInfo(url=get_mini_app_url("/"))
             )
         ]
     ])

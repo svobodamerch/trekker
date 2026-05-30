@@ -105,16 +105,61 @@ Option 3: **Render** (alternative)
 3. Start command: `python -m bot.bot.main`
 4. Environment variables same as above
 
-## Step 5: Configure Telegram Mini App
+## Step 5: Configure Telegram Bot (@BotFather)
 
+### 5.1 Set About Text
 1. Go to @BotFather
-2. Send `/mybots`
+2. Send `/setabouttext`
 3. Select your bot
-4. "Bot Settings" → "Menu Button" → "Configure menu button"
-5. Set button text: "📝 Пульс"
-6. Set URL: `https://your-frontend.vercel.app`
+4. Enter:
+```
+Пульс дня, цели, динамика и мягкое самонаблюдение в Telegram.
+```
 
-7. Test: Open bot in Telegram, click menu button
+### 5.2 Set Description
+1. Send `/setdescription`
+2. Select your bot
+3. Enter:
+```
+Это приложение для мягкого самонаблюдения.
+
+Каждый день можно за 1 минуту отметить настроение, энергию, тревогу, короткий инсайт и один фокус на завтра.
+
+Также здесь есть цели, «жизнь мечты», колесо баланса, недельные отражения и история изменений продукта.
+
+Это ранняя тестовая версия. Приложение не является медицинской или психологической помощью.
+```
+
+### 5.3 Set Commands
+1. Send `/setcommands`
+2. Select your bot
+3. Enter:
+```
+start - начать и открыть приложение
+help - как пользоваться
+about - что это за приложение
+updates - последние обновления
+roadmap - что планируется дальше
+changelog - история изменений
+privacy - данные и приватность
+feedback - отправить обратную связь
+pulse - записать Пульс дня
+goals - открыть цели и ориентиры
+history - посмотреть историю записей
+```
+
+### 5.4 Configure Menu Button
+1. Send `/mybots` → Select your bot
+2. "Bot Settings" → "Menu Button" → "Configure menu button"
+3. Set button text: "Открыть приложение"
+4. Set URL: `https://your-frontend.vercel.app`
+
+### 5.5 Test
+Open bot in Telegram, check:
+- [ ] `/start` shows welcome message with buttons
+- [ ] `/help` shows usage instructions
+- [ ] Menu button opens Mini App
+- [ ] All commands work
 
 ## Step 6: Verify Deployment
 
