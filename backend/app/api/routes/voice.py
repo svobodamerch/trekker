@@ -91,6 +91,12 @@ async def process_voice(
             "mood": entry.mood,
             "energy": entry.energy,
             "anxiety": entry.anxiety,
+            # Text fields from voice
+            "body_state": entry.body_state,
+            "insight": entry.insight,
+            "gratitude": entry.gratitude,
+            "today_moment": entry.today_moment,
+            "tomorrow_commitment": entry.tomorrow_commitment,
         }
 
     return {

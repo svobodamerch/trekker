@@ -12,6 +12,12 @@ export interface VoiceProcessResult {
     anxiety?: number
     title?: string
     horizon?: string
+    // Text fields for entry
+    body_state?: string
+    insight?: string
+    gratitude?: string
+    tomorrow_commitment?: string
+    today_moment?: string
   }
   data?: {
     body_state?: string

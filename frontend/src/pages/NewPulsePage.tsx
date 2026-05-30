@@ -27,22 +27,86 @@ export function NewPulsePage() {
   const [recordingStep, setRecordingStep] = useState(0)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
+  const streamRef = useRef<MediaStream | null>(null)
 
-  // Voice guidance questions
+  // Voice guidance questions - text fields only (no numbers)
   const voiceQuestions = [
-    { emoji: '🎭', question: 'Какое сейчас настроение?', hint: 'Скажи число от 1 до 10' },
-    { emoji: '⚡', question: 'Какая энергия в теле?', hint: 'Оцени от 1 до 10' },
-    { emoji: '🌊', question: 'Есть ли тревога?', hint: 'Или скажи "нет"' },
-    { emoji: '🎯', question: 'Что в теле сейчас?', hint: 'Напряжение, расслабленность...' },
-    { emoji: '💡', question: 'Главный инсайт дня?', hint: 'Или скажи "нет"' },
-    { emoji: '🙏', question: 'За что благодарен?', hint: 'Можно пропустить' },
-    { emoji: '📍', question: 'Момент осознанности?', hint: 'Когда был здесь и сейчас?' },
-    { emoji: '🌅', question: 'Обязательство на завтра?', hint: 'Одно, что точно сделаешь?' },
+    { emoji: '🎯', question: 'Что в теле сейчас?', hint: 'Напряжение, расслабленность, ощущения...' },
+    { emoji: '💡', question: 'Главный инсайт дня?', hint: 'Что осознал сегодня?' },
+    { emoji: '🙏', question: 'За что благодарен?', hint: 'Маленькие или большие вещи...' },
+    { emoji: '📍', question: 'Момент осознанности?', hint: 'Когда был "здесь и сейчас"?' },
+    { emoji: '🌅', question: 'Обязательство на завтра?', hint: 'Одно конкретное действие...' },
   ]
+
+  // Audio visualization refs
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
+  const animationRef = useRef<number | null>(null)
+  const [audioData, setAudioData] = useState<number[]>(new Array(12).fill(10))
+
+  // Real-time audio visualization
+  const startAudioVisualization = (stream: MediaStream) => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const analyser = audioContext.createAnalyser()
+      const source = audioContext.createMediaStreamSource(stream)
+      
+      source.connect(analyser)
+      analyser.fftSize = 64
+      analyser.smoothingTimeConstant = 0.8
+      
+      audioContextRef.current = audioContext
+      analyserRef.current = analyser
+      
+      const dataArray = new Uint8Array(analyser.frequencyBinCount)
+      
+      const animate = () => {
+        if (!analyserRef.current) return
+        
+        analyserRef.current.getByteFrequencyData(dataArray)
+        
+        // Take 12 samples from the frequency data
+        const samples = []
+        const step = Math.floor(dataArray.length / 12)
+        for (let i = 0; i < 12; i++) {
+          const value = dataArray[i * step] || 0
+          // Scale to 10-100 range for visual
+          samples.push(Math.max(10, Math.min(100, value)))
+        }
+        
+        setAudioData(samples)
+        animationRef.current = requestAnimationFrame(animate)
+      }
+      
+      animate()
+    } catch (e) {
+      console.log('Audio visualization not supported, using fallback')
+      // Fallback: random animation
+      const fallbackAnimate = () => {
+        setAudioData(new Array(12).fill(0).map(() => 20 + Math.random() * 60))
+        animationRef.current = requestAnimationFrame(fallbackAnimate)
+      }
+      fallbackAnimate()
+    }
+  }
+  
+  const stopAudioVisualization = () => {
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current)
+      animationRef.current = null
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close()
+      audioContextRef.current = null
+    }
+    analyserRef.current = null
+    setAudioData(new Array(12).fill(10))
+  }
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
       const mediaRecorder = new MediaRecorder(stream)
       mediaRecorderRef.current = mediaRecorder
       audioChunksRef.current = []
@@ -54,15 +118,20 @@ export function NewPulsePage() {
       }
 
       mediaRecorder.onstop = async () => {
+        stopAudioVisualization()
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/ogg' })
         await handleVoiceProcessing(audioBlob)
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop())
+        streamRef.current = null
       }
 
       mediaRecorder.start()
       setIsRecording(true)
       setRecordingStep(0)
+      
+      // Start real-time visualization
+      startAudioVisualization(stream)
     } catch (err) {
       alert('Не удалось получить доступ к микрофону. Проверь разрешения.')
     }
@@ -73,6 +142,7 @@ export function NewPulsePage() {
       mediaRecorderRef.current.stop()
       setIsRecording(false)
       setRecordingStep(0)
+      stopAudioVisualization()
     }
   }
 
@@ -82,17 +152,15 @@ export function NewPulsePage() {
       const result = await processVoiceRecording(audioBlob)
 
       if (result.success && result.recognized_type === 'entry') {
-        // Fill form with voice data - both numbers and text fields
+        // Fill text fields only - numbers come from sliders, not voice
         setForm(prev => ({
           ...prev,
-          mood: result.created.mood ?? prev.mood,
-          energy: result.created.energy ?? prev.energy,
-          anxiety: result.created.anxiety ?? prev.anxiety,
-          // AI extracts these from voice too
-          body_state: result.data?.body_state || prev.body_state,
-          insight: result.data?.insight || prev.insight,
-          gratitude: result.data?.gratitude || prev.gratitude,
-          tomorrow_commitment: result.data?.tomorrow_commitment || prev.tomorrow_commitment,
+          // Text fields from voice only
+          body_state: result.data?.body_state || result.created.body_state || prev.body_state,
+          insight: result.data?.insight || result.created.insight || prev.insight,
+          gratitude: result.data?.gratitude || result.created.gratitude || prev.gratitude,
+          tomorrow_commitment: result.data?.tomorrow_commitment || result.created.tomorrow_commitment || prev.tomorrow_commitment,
+          // Note: mood/energy/anxiety come from sliders, NOT from voice
         }))
         setVoicePreview(result.transcript)
       } else if (result.success && result.recognized_type === 'goal') {
@@ -104,6 +172,7 @@ export function NewPulsePage() {
         setVoicePreview(result.transcript || 'Голос не распознан')
       }
     } catch (err) {
+      console.error('Voice processing error:', err)
       alert('Не удалось обработать голос. Попробуй ещё раз.')
     } finally {
       setIsProcessingVoice(false)
@@ -139,113 +208,6 @@ export function NewPulsePage() {
           Пульс дня
         </h1>
 
-        {/* Voice recording */}
-        <div className="mb-6">
-          {!isRecording && !isProcessingVoice && !voicePreview && (
-            <button
-              onClick={startRecording}
-              className="w-full py-3 bg-white border-2 border-dashed border-soft-300 rounded-xl text-soft-600 flex items-center justify-center gap-2 hover:border-soft-500 hover:text-soft-700 transition-colors"
-            >
-              <span className="text-xl">🎤</span>
-              <span className="text-sm font-medium">Голосовой отчет — скажи вслух</span>
-            </button>
-          )}
-
-          {isRecording && (
-            <div className="py-6 px-4 bg-gradient-to-br from-soft-100 to-soft-200 rounded-2xl">
-              {/* Wave animation indicator */}
-              <div className="flex justify-center items-end gap-1 h-12 mb-4">
-                {[...Array(12)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="w-1.5 bg-soft-500 rounded-full animate-wave"
-                    style={{
-                      height: `${20 + Math.random() * 60}%`,
-                      animationDelay: `${i * 0.1}s`,
-                    }}
-                  />
-                ))}
-              </div>
-
-              {/* Progress dots */}
-              <div className="flex justify-center gap-1 mb-4">
-                {voiceQuestions.map((_, idx) => (
-                  <div
-                    key={idx}
-                    className={`w-2 h-2 rounded-full transition-colors ${
-                      idx === recordingStep ? 'bg-soft-600' :
-                      idx < recordingStep ? 'bg-soft-400' : 'bg-soft-200'
-                    }`}
-                  />
-                ))}
-              </div>
-
-              {/* Current question */}
-              <div className="text-center mb-4">
-                <div className="text-4xl mb-2">{voiceQuestions[recordingStep]?.emoji}</div>
-                <h3 className="text-lg font-medium text-soft-800 mb-1">
-                  {voiceQuestions[recordingStep]?.question}
-                </h3>
-                <p className="text-sm text-soft-500">
-                  {voiceQuestions[recordingStep]?.hint}
-                </p>
-              </div>
-
-              {/* Navigation */}
-              <div className="flex items-center justify-center gap-3">
-                {recordingStep > 0 && (
-                  <button
-                    onClick={() => setRecordingStep(prev => prev - 1)}
-                    className="px-4 py-2 text-soft-500 text-sm hover:text-soft-700"
-                  >
-                    ← Назад
-                  </button>
-                )}
-
-                <button
-                  onClick={stopRecording}
-                  className="px-6 py-3 bg-red-500 text-white rounded-full font-medium hover:bg-red-600 transition-colors flex items-center gap-2"
-                >
-                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                  Завершить
-                </button>
-
-                {recordingStep < voiceQuestions.length - 1 && (
-                  <button
-                    onClick={() => setRecordingStep(prev => prev + 1)}
-                    className="px-4 py-2 text-soft-500 text-sm hover:text-soft-700"
-                  >
-                    Пропустить →
-                  </button>
-                )}
-              </div>
-
-              <p className="text-center text-xs text-soft-400 mt-3">
-                Вопрос {recordingStep + 1} из {voiceQuestions.length}
-              </p>
-            </div>
-          )}
-
-          {isProcessingVoice && (
-            <div className="flex items-center justify-center py-4 bg-soft-50 rounded-xl">
-              <span className="text-soft-500 text-sm">Распознаю голос...</span>
-            </div>
-          )}
-
-          {voicePreview && (
-            <div className="p-3 bg-soft-50 rounded-xl">
-              <p className="text-xs text-soft-400 mb-1">Распознано:</p>
-              <p className="text-sm text-soft-700 italic">"{voicePreview}"</p>
-              <button
-                onClick={() => setVoicePreview(null)}
-                className="mt-2 text-xs text-soft-400 hover:text-soft-600"
-              >
-                Очистить
-              </button>
-            </div>
-          )}
-        </div>
-
         <div className="space-y-8">
           <SliderInput
             label="Настроение"
@@ -270,6 +232,113 @@ export function NewPulsePage() {
             leftLabel="Нет сил"
             rightLabel="Полный ресурс"
           />
+
+          {/* Voice recording - after sliders */}
+          <div className="py-4 border-t border-soft-200">
+            {!isRecording && !isProcessingVoice && !voicePreview && (
+              <button
+                onClick={startRecording}
+                className="w-full py-4 bg-soft-100 border-2 border-dashed border-soft-300 rounded-xl text-soft-600 flex items-center justify-center gap-2 hover:border-soft-500 hover:text-soft-700 hover:bg-soft-150 transition-colors"
+              >
+                <span className="text-2xl">🎤</span>
+                <span className="text-sm font-medium">Голосовой отчет — расскажи текстом</span>
+              </button>
+            )}
+
+            {isRecording && (
+              <div className="py-6 px-4 bg-gradient-to-br from-soft-100 to-soft-200 rounded-2xl">
+                {/* Real audio wave visualization */}
+                <div className="flex justify-center items-end gap-1 h-16 mb-6">
+                  {audioData.map((value, i) => (
+                    <div
+                      key={i}
+                      className="w-2 bg-soft-500 rounded-full transition-all duration-75"
+                      style={{
+                        height: `${Math.max(8, value)}%`,
+                        opacity: value > 30 ? 1 : 0.5,
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* Progress dots */}
+                <div className="flex justify-center gap-1.5 mb-4">
+                  {voiceQuestions.map((_, idx) => (
+                    <div
+                      key={idx}
+                      className={`w-2 h-2 rounded-full transition-colors ${
+                        idx === recordingStep ? 'bg-soft-600' :
+                        idx < recordingStep ? 'bg-soft-400' : 'bg-soft-200'
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                {/* Current question */}
+                <div className="text-center mb-6">
+                  <div className="text-4xl mb-2">{voiceQuestions[recordingStep]?.emoji}</div>
+                  <h3 className="text-lg font-medium text-soft-800 mb-1">
+                    {voiceQuestions[recordingStep]?.question}
+                  </h3>
+                  <p className="text-sm text-soft-500">
+                    {voiceQuestions[recordingStep]?.hint}
+                  </p>
+                </div>
+
+                {/* Navigation */}
+                <div className="flex items-center justify-center gap-3">
+                  {recordingStep > 0 && (
+                    <button
+                      onClick={() => setRecordingStep(prev => prev - 1)}
+                      className="px-4 py-2 text-soft-500 text-sm hover:text-soft-700"
+                    >
+                      ← Назад
+                    </button>
+                  )}
+
+                  <button
+                    onClick={stopRecording}
+                    className="px-6 py-3 bg-red-500 text-white rounded-full font-medium hover:bg-red-600 transition-colors flex items-center gap-2"
+                  >
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                    Завершить
+                  </button>
+
+                  {recordingStep < voiceQuestions.length - 1 && (
+                    <button
+                      onClick={() => setRecordingStep(prev => prev + 1)}
+                      className="px-4 py-2 text-soft-500 text-sm hover:text-soft-700"
+                    >
+                      Пропустить →
+                    </button>
+                  )}
+                </div>
+
+                <p className="text-center text-xs text-soft-400 mt-3">
+                  Вопрос {recordingStep + 1} из {voiceQuestions.length}
+                </p>
+              </div>
+            )}
+
+            {isProcessingVoice && (
+              <div className="flex items-center justify-center py-4 bg-soft-50 rounded-xl">
+                <span className="text-soft-500 text-sm">Распознаю голос...</span>
+              </div>
+            )}
+
+            {voicePreview && (
+              <div className="p-3 bg-soft-50 rounded-xl">
+                <p className="text-xs text-soft-400 mb-1">Распознано:</p>
+                <p className="text-sm text-soft-700 italic">"{voicePreview}"</p>
+                <button
+                  onClick={() => setVoicePreview(null)}
+                  className="mt-2 text-xs text-soft-400 hover:text-soft-600"
+                >
+                  Очистить
+                </button>
+              </div>
+            )}
+          </div>
 
           <TextArea
             label="Что сейчас в теле?"
