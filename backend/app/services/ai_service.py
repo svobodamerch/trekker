@@ -340,8 +340,12 @@ class AIService:
         goals: List[Goal],
     ) -> str:
         """Build the prompt for weekly reflection."""
+        # Limit entries to avoid exceeding model context window
+        MAX_ENTRIES = 50
+        MAX_INSIGHT_LENGTH = 500
+
         entries_text = []
-        for e in entries:
+        for e in entries[:MAX_ENTRIES]:
             date_str = e.created_at.strftime("%Y-%m-%d") if e.created_at else "Unknown"
             parts = [f"{date_str}:"]
             if e.mood:
@@ -351,7 +355,10 @@ class AIService:
             if e.anxiety:
                 parts.append(f"тревога {e.anxiety}/10")
             if e.insight:
-                parts.append(f"инсайт: {e.insight}")
+                insight = e.insight
+                if len(insight) > MAX_INSIGHT_LENGTH:
+                    insight = insight[:MAX_INSIGHT_LENGTH] + "..."
+                parts.append(f"инсайт: {insight}")
             entries_text.append(" | ".join(parts))
 
         goals_text = []

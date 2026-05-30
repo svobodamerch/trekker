@@ -108,6 +108,12 @@ class VoiceService:
 
     async def _ai_parse(self, transcript: str) -> Dict[str, Any]:
         """Use AI to parse transcript into structured Entry or Goal."""
+        # Limit transcript length to avoid exceeding model context window
+        # ~3000 tokens ≈ ~12000 chars for Russian text
+        MAX_TRANSCRIPT_LENGTH = 12000
+        if len(transcript) > MAX_TRANSCRIPT_LENGTH:
+            transcript = transcript[:MAX_TRANSCRIPT_LENGTH] + "..."
+
         prompt = f"""Проанализируй голосовой отчет пользователя. Извлеки ТОЛЬКО текстовые поля — НЕ извлекай числа настроения/энергии/тревоги (их пользователь ставит ползунками отдельно).
 
 Запись: "{transcript}"

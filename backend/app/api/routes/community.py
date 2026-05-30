@@ -52,9 +52,32 @@ def get_source_preview(db: Session, source_type: str, source_id: int) -> tuple[O
     if source_type == "pulse":
         entry = db.query(Entry).filter_by(id=source_id).first()
         if entry:
+            # Build NTE line
+            nte_parts = []
+            if entry.mood is not None:
+                nte_parts.append(f"Настроение: {entry.mood}/10")
+            if entry.anxiety is not None:
+                nte_parts.append(f"Тревога: {entry.anxiety}/10")
+            if entry.energy is not None:
+                nte_parts.append(f"Энергия: {entry.energy}/10")
+            nte_line = " | ".join(nte_parts) if nte_parts else ""
+            
+            # Build body with all fields
+            body_parts = []
+            if nte_line:
+                body_parts.append(nte_line)
+            if entry.body_state:
+                body_parts.append(f"🫁 {entry.body_state}")
+            if entry.insight:
+                body_parts.append(f"💡 {entry.insight}")
+            if entry.gratitude:
+                body_parts.append(f"🙏 {entry.gratitude}")
+            if entry.tomorrow_commitment:
+                body_parts.append(f"🎯 {entry.tomorrow_commitment}")
+            
+            body = "\n\n".join(body_parts)
             title = f"Пульс от {entry.created_at.strftime('%d.%m')}"
-            body = entry.body_state or entry.insight or entry.gratitude or entry.tomorrow_commitment or ""
-            return title, body[:500]
+            return title, body[:800]
     elif source_type == "goal":
         goal = db.query(Goal).filter_by(id=source_id).first()
         if goal:
