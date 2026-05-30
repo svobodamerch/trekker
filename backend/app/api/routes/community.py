@@ -32,13 +32,13 @@ def get_display_name(user: User, visibility: str) -> str:
 def check_source_ownership(db: Session, source_type: str, source_id: int, user_id: int) -> bool:
     """Verify user owns the source object they want to share."""
     if source_type == "pulse":
-        entry = db.get(Entry, source_id)
+        entry = db.query(Entry).filter_by(id=source_id).first()
         return entry is not None and entry.user_id == user_id
     elif source_type == "goal":
-        goal = db.get(Goal, source_id)
+        goal = db.query(Goal).filter_by(id=source_id).first()
         return goal is not None and goal.user_id == user_id
     elif source_type == "life_balance":
-        snapshot = db.get(LifeBalanceSnapshot, source_id)
+        snapshot = db.query(LifeBalanceSnapshot).filter_by(id=source_id).first()
         return snapshot is not None and snapshot.user_id == user_id
     elif source_type == "custom":
         return True  # No source to verify
@@ -48,17 +48,17 @@ def check_source_ownership(db: Session, source_type: str, source_id: int, user_i
 def get_source_preview(db: Session, source_type: str, source_id: int) -> tuple[Optional[str], str]:
     """Get title and body preview from source."""
     if source_type == "pulse":
-        entry = db.get(Entry, source_id)
+        entry = db.query(Entry).filter_by(id=source_id).first()
         if entry:
             title = f"Пульс от {entry.created_at.strftime('%d.%m')}"
             body = entry.body_state or entry.insight or entry.gratitude or entry.tomorrow_commitment or ""
             return title, body[:500]
     elif source_type == "goal":
-        goal = db.get(Goal, source_id)
+        goal = db.query(Goal).filter_by(id=source_id).first()
         if goal:
             return goal.current_title, goal.current_description or ""[:500]
     elif source_type == "life_balance":
-        snapshot = db.get(LifeBalanceSnapshot, source_id)
+        snapshot = db.query(LifeBalanceSnapshot).filter_by(id=source_id).first()
         if snapshot:
             return f"Срез баланса ({snapshot.created_at.strftime('%d.%m')})", snapshot.notes or ""
     return None, ""
@@ -87,7 +87,8 @@ async def get_feed(
         cursor_id = int(cursor)
         query = query.where(CommunityPost.id < cursor_id)
     
-    posts = db.exec(query.limit(limit + 1)).all()
+    result = db.execute(query.limit(limit + 1))
+    posts = result.scalars().all()
     
     has_more = len(posts) > limit
     posts = posts[:limit]
@@ -96,23 +97,23 @@ async def get_feed(
     result_posts = []
     for post in posts:
         # Count comments
-        comment_count = db.exec(
+        comment_count = db.scalar(
             select(func.count())
             .where(CommunityComment.post_id == post.id)
             .where(CommunityComment.status == "published")
-        ).first() or 0
+        ) or 0
         
         # Count reactions and check if user reacted
-        reaction_count = db.exec(
+        reaction_count = db.scalar(
             select(func.count())
             .where(CommunityReaction.post_id == post.id)
-        ).first() or 0
+        ) or 0
         
-        has_user_reacted = db.exec(
+        has_user_reacted = db.scalar(
             select(func.count())
             .where(CommunityReaction.post_id == post.id)
             .where(CommunityReaction.user_id == current_user.id)
-        ).first() or 0 > 0
+        ) or 0 > 0
         
         # Get source preview
         source_preview = None
@@ -208,24 +209,26 @@ async def get_post(
     current_user: User = Depends(get_current_user),
 ):
     """Get single post with comments."""
-    post = db.exec(
+    result = db.execute(
         select(CommunityPost)
         .where(CommunityPost.id == post_id)
         .where(CommunityPost.status == "published")
         .options(joinedload(CommunityPost.user))
-    ).first()
+    )
+    post = result.scalars().first()
     
     if not post:
         raise HTTPException(404, "Публикация не найдена")
     
     # Get comments
-    comments = db.exec(
+    comments_result = db.execute(
         select(CommunityComment)
         .where(CommunityComment.post_id == post_id)
         .where(CommunityComment.status == "published")
         .options(joinedload(CommunityComment.user))
         .order_by(CommunityComment.created_at.asc())
-    ).all()
+    )
+    comments = comments_result.scalars().all()
     
     comment_responses = [
         CommunityCommentResponse(
@@ -243,16 +246,16 @@ async def get_post(
     ]
     
     # Get counts
-    reaction_count = db.exec(
+    reaction_count = db.scalar(
         select(func.count())
         .where(CommunityReaction.post_id == post_id)
-    ).first() or 0
+    ) or 0
     
-    has_user_reacted = db.exec(
+    has_user_reacted = db.scalar(
         select(func.count())
         .where(CommunityReaction.post_id == post_id)
         .where(CommunityReaction.user_id == current_user.id)
-    ).first() or 0 > 0
+    ) or 0 > 0
     
     source_preview = None
     if post.source_type != "custom":
@@ -286,7 +289,7 @@ async def update_post(
     current_user: User = Depends(get_current_user),
 ):
     """Update own post."""
-    post = db.get(CommunityPost, post_id)
+    post = db.query(CommunityPost).filter_by(id=post_id).first()
     if not post:
         raise HTTPException(404, "Публикация не найдена")
     
@@ -310,7 +313,7 @@ async def delete_post(
     current_user: User = Depends(get_current_user),
 ):
     """Delete (soft) own post."""
-    post = db.get(CommunityPost, post_id)
+    post = db.query(CommunityPost).filter_by(id=post_id).first()
     if not post:
         raise HTTPException(404, "Публикация не найдена")
     
@@ -334,7 +337,7 @@ async def create_comment(
 ):
     """Add comment to post."""
     # Verify post exists and is published
-    post = db.get(CommunityPost, post_id)
+    post = db.query(CommunityPost).filter_by(id=post_id).first()
     if not post or post.status != "published":
         raise HTTPException(404, "Публикация не найдена")
     
@@ -374,7 +377,7 @@ async def delete_comment(
     current_user: User = Depends(get_current_user),
 ):
     """Delete (soft) own comment."""
-    comment = db.get(CommunityComment, comment_id)
+    comment = db.query(CommunityComment).filter_by(id=comment_id).first()
     if not comment:
         raise HTTPException(404, "Комментарий не найден")
     
@@ -398,17 +401,17 @@ async def add_reaction(
 ):
     """Add reaction to post (or toggle if already exists)."""
     # Verify post exists
-    post = db.get(CommunityPost, post_id)
+    post = db.query(CommunityPost).filter_by(id=post_id).first()
     if not post or post.status != "published":
         raise HTTPException(404, "Публикация не найдена")
     
     # Check if already reacted
-    existing = db.exec(
+    existing = db.execute(
         select(CommunityReaction)
         .where(CommunityReaction.post_id == post_id)
         .where(CommunityReaction.user_id == current_user.id)
         .where(CommunityReaction.reaction_type == data.reaction_type)
-    ).first()
+    ).scalars().first()
     
     if existing:
         # Remove reaction (toggle off)
@@ -456,12 +459,12 @@ async def create_report(
     
     # Verify existence
     if data.post_id:
-        post = db.get(CommunityPost, data.post_id)
+        post = db.query(CommunityPost).filter_by(id=data.post_id).first()
         if not post:
             raise HTTPException(404, "Публикация не найдена")
     
     if data.comment_id:
-        comment = db.get(CommunityComment, data.comment_id)
+        comment = db.query(CommunityComment).filter_by(id=data.comment_id).first()
         if not comment:
             raise HTTPException(404, "Комментарий не найден")
     
@@ -565,30 +568,30 @@ async def get_user_stats(
     current_user: User = Depends(get_current_user),
 ):
     """Get current user's community activity stats."""
-    posts_count = db.exec(
+    posts_count = db.scalar(
         select(func.count())
         .where(CommunityPost.user_id == current_user.id)
         .where(CommunityPost.status == "published")
-    ).first() or 0
+    ) or 0
     
-    comments_count = db.exec(
+    comments_count = db.scalar(
         select(func.count())
         .where(CommunityComment.user_id == current_user.id)
         .where(CommunityComment.status == "published")
-    ).first() or 0
+    ) or 0
     
-    reactions_given = db.exec(
+    reactions_given = db.scalar(
         select(func.count())
         .where(CommunityReaction.user_id == current_user.id)
-    ).first() or 0
+    ) or 0
     
     # Reactions received on user's posts
-    reactions_received = db.exec(
+    reactions_received = db.scalar(
         select(func.count())
         .select_from(CommunityReaction)
         .join(CommunityPost, CommunityReaction.post_id == CommunityPost.id)
         .where(CommunityPost.user_id == current_user.id)
-    ).first() or 0
+    ) or 0
     
     return {
         "posts_count": posts_count,
