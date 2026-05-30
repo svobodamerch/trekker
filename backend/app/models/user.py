@@ -35,6 +35,9 @@ class User(SQLModel, table=True):
     
     # Daily 10 Goals (Brian Tracy)
     daily_goals: list["DailyTenGoals"] = Relationship(back_populates="user")
+    
+    # Weekly AI Reports
+    weekly_reports: list["WeeklyReport"] = Relationship(back_populates="user")
 
 
 class UserSettings(SQLModel, table=True):

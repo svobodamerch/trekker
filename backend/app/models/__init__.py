@@ -9,6 +9,7 @@ from app.models.feedback import FeedbackMessage
 from app.models.life_balance import LifeBalanceSnapshot, LifeBalanceScore
 from app.models.community import CommunityPost, CommunityComment, CommunityReaction, CommunityReport
 from app.models.daily_goals import DailyTenGoals
+from app.models.weekly_report import WeeklyReport, CommunityWeeklyReport
 
 __all__ = [
     "User",
@@ -31,4 +32,7 @@ __all__ = [
     "CommunityReport",
     # Daily Goals
     "DailyTenGoals",
+    # Weekly Reports
+    "WeeklyReport",
+    "CommunityWeeklyReport",
 ]
