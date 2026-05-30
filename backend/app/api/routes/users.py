@@ -27,9 +27,7 @@ def calculate_age(birth_date_str: str) -> int:
 @router.get("/me", response_model=UserProfile)
 def get_my_profile(current_user: User = Depends(get_current_user)):
     """Get current user's full profile with calculated age."""
-    # Calculate age from birth_date if available
-    if current_user.birth_date:
-        current_user.age = calculate_age(current_user.birth_date)
+    # Return user as-is, age is calculated in schema from birth_date
     return current_user
 
 
@@ -66,8 +64,6 @@ def complete_onboarding(
     db.commit()
     db.refresh(current_user)
     
-    # Calculate age for response
-    current_user.age = calculate_age(current_user.birth_date)
     return current_user
 
 
