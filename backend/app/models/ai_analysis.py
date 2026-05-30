@@ -11,17 +11,19 @@ class AIAnalysis(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="users.id", index=True)
     
-    # Source of analysis
-    source_type: str = Field(default="pulse")  # pulse, goal, life_balance, combined
-    source_ids: List[int] = Field(default=[], sa_column=Column(JSON))
+    # Legacy fields (for DB compatibility)
+    entry_id: Optional[int] = Field(default=None, foreign_key="entries.id")
+    goal_id: Optional[int] = Field(default=None, foreign_key="goals.id")
+    
+    # Source of analysis (legacy fields from DB)
+    analysis_type: Optional[str] = Field(default="summary")  # summary, patterns, etc
     
     # Analysis content
-    analysis_type: str = Field(default="summary")  # summary, patterns, insights, recommendations
-    content: str  # The actual AI-generated analysis
+    analysis_text: str  # The actual AI-generated analysis
     
-    # Metadata
-    model_used: str = Field(default="claude-3-haiku-20240307")
-    tokens_used: Optional[int] = None
+    # Metadata (legacy fields from DB)
+    model_name: Optional[str] = Field(default="claude-3-haiku-20240307")  # DB field name
+    prompt_version: Optional[str] = None
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
