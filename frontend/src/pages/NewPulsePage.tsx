@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { SliderInput } from '../components/SliderInput'
 import { TextArea } from '../components/TextArea'
 import { createEntry } from '../api/entries'
+import { shareFromSource } from '../api/community'
 
 export function NewPulsePage() {
   const navigate = useNavigate()
@@ -16,6 +17,8 @@ export function NewPulsePage() {
     gratitude: '',
     tomorrow_commitment: '',
   })
+  const [shareToCommunity, setShareToCommunity] = useState(false)
+  const [sharePrompt, setSharePrompt] = useState('')
 
   const canSave = form.mood !== undefined && form.anxiety !== undefined && form.energy !== undefined
 
@@ -23,7 +26,8 @@ export function NewPulsePage() {
     if (!canSave) return
     setSaving(true)
     try {
-      await createEntry({
+      // Create the pulse entry
+      const entry = await createEntry({
         mood: form.mood,
         anxiety: form.anxiety,
         energy: form.energy,
@@ -33,6 +37,22 @@ export function NewPulsePage() {
         tomorrow_commitment: form.tomorrow_commitment || undefined,
         source: 'mini_app',
       })
+      
+      // Optionally share to community
+      if (shareToCommunity) {
+        try {
+          await shareFromSource({
+            source_type: 'pulse',
+            source_id: entry.id,
+            discussion_prompt: sharePrompt || undefined,
+            visibility: 'anonymous'
+          })
+        } catch (shareErr) {
+          console.error('Failed to share to community', shareErr)
+          // Don't block navigation on share error
+        }
+      }
+      
       navigate('/')
     } catch (err) {
       alert('Что-то пошло не так. Давай попробуем ещё раз?')
@@ -104,6 +124,38 @@ export function NewPulsePage() {
             placeholder="Что одно точно сделаешь?"
             rows={2}
           />
+
+          {/* Share to Community */}
+          <div className="bg-soft-50 rounded-2xl p-4 space-y-3">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={shareToCommunity}
+                onChange={(e) => setShareToCommunity(e.target.checked)}
+                className="mt-1 w-5 h-5 accent-soft-600"
+              />
+              <div>
+                <span className="font-medium text-soft-800 block">
+                  Добавить в общую ленту в круг поддержки
+                </span>
+                <span className="text-soft-500 text-sm">
+                  Люди смогут поддержать тебя и обсудить твой пульс
+                </span>
+              </div>
+            </label>
+
+            {shareToCommunity && (
+              <div className="pt-2 border-t border-soft-200">
+                <input
+                  type="text"
+                  value={sharePrompt}
+                  onChange={(e) => setSharePrompt(e.target.value)}
+                  placeholder="Вопрос к сообществу (необязательно)..."
+                  className="w-full px-4 py-3 rounded-xl border border-soft-200 bg-white text-soft-900 placeholder:text-soft-400 focus:outline-none focus:ring-2 focus:ring-soft-400 text-sm"
+                />
+              </div>
+            )}
+          </div>
 
           <div className="pt-4 space-y-3">
             <button

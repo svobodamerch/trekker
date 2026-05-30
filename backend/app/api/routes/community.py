@@ -25,7 +25,9 @@ def get_display_name(user: User, visibility: str) -> str:
     """Get display name based on visibility setting."""
     if visibility == "anonymous":
         return "Пользователь"
-    # For named visibility, could use username or first_name
+    # For named visibility, use full name if available
+    if user.first_name and user.last_name:
+        return f"{user.first_name} {user.last_name}"
     return user.username or user.first_name or "Пользователь"
 
 

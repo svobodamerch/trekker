@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { HomePage } from './pages/HomePage'
 import { NewPulsePage } from './pages/NewPulsePage'
 import { HistoryPage } from './pages/HistoryPage'
@@ -12,12 +12,15 @@ import { LifeBalancePage } from './pages/LifeBalancePage'
 import { CommunityPage } from './pages/CommunityPage'
 import { CommunityPostPage } from './pages/CommunityPostPage'
 import { CommunityNewPostPage } from './pages/CommunityNewPostPage'
+import { OnboardingPage } from './pages/OnboardingPage'
 import { authenticateWithTelegram } from './telegram/init'
 import { isAuthenticated, clearAuthToken } from './utils/auth'
+import { getMyProfile } from './api/users'
 
 function App() {
   const [authReady, setAuthReady] = useState(false)
   const [authFailed, setAuthFailed] = useState(false)
+  const [needsOnboarding, setNeedsOnboarding] = useState(false)
 
   useEffect(() => {
     const twa = window.Telegram?.WebApp
@@ -33,13 +36,40 @@ function App() {
         // Always re-auth in Telegram to ensure correct user isolation
         clearAuthToken()
         authenticateWithTelegram().then((ok) => {
-          if (!ok) setAuthFailed(true)
-          setAuthReady(true)
+          if (!ok) {
+            setAuthFailed(true)
+            setAuthReady(true)
+          } else {
+            // Check if user needs onboarding
+            getMyProfile().then((profile) => {
+              setNeedsOnboarding(!profile.onboarding_completed)
+              setAuthReady(true)
+            }).catch(() => {
+              setAuthReady(true)
+            })
+          }
         })
       } else if (isAuthenticated()) {
-        setAuthReady(true)
+        // Check if user needs onboarding
+        getMyProfile().then((profile) => {
+          setNeedsOnboarding(!profile.onboarding_completed)
+          setAuthReady(true)
+        }).catch(() => {
+          setAuthReady(true)
+        })
       } else if (import.meta.env.DEV) {
-        authenticateWithTelegram().finally(() => setAuthReady(true))
+        authenticateWithTelegram().then((ok) => {
+          if (ok) {
+            getMyProfile().then((profile) => {
+              setNeedsOnboarding(!profile.onboarding_completed)
+              setAuthReady(true)
+            }).catch(() => {
+              setAuthReady(true)
+            })
+          } else {
+            setAuthReady(true)
+          }
+        })
       } else {
         setAuthFailed(true)
         setAuthReady(true)

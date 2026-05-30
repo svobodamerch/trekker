@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db, engine
 from app.models import User, Entry
-from app.api.routes import entries, auth, goals, reminders, weekly_reflection, feedback, life_balance, voice, community
+from app.api.routes import entries, auth, goals, reminders, weekly_reflection, feedback, life_balance, voice, community, users
 
 app = FastAPI(title="Self-Observation API", version="0.1.0")
 app.include_router(entries.router)
@@ -16,6 +16,7 @@ app.include_router(feedback.router)
 app.include_router(life_balance.router)
 app.include_router(voice.router)
 app.include_router(community.router)
+app.include_router(users.router)
 
 from app.config import settings
 

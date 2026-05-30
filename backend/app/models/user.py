@@ -15,6 +15,11 @@ class User(SQLModel, table=True):
     timezone: str = Field(default="UTC")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Profile fields
+    gender: Optional[str] = None  # male, female, other
+    age: Optional[int] = None
+    onboarding_completed: bool = Field(default=False)
 
     settings: Optional["UserSettings"] = Relationship(back_populates="user")
     entries: list["Entry"] = Relationship(back_populates="user")
