@@ -302,23 +302,23 @@ export function GoalsPage() {
         )}
 
         {/* Daily 10 Goals (Brian Tracy Technique) */}
-        <SoftCard className="p-4 bg-gradient-to-br from-amber-50 to-orange-50 border-amber-100">
+        <SoftCard className="p-4 bg-soft-50 border-soft-200">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <span className="text-2xl">📝</span>
-              <h3 className="font-semibold text-amber-900">10 целей ежедневно</h3>
+              <h3 className="font-semibold text-soft-800">10 целей ежедневно</h3>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowAboutPractice(true)}
-                className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-lg hover:bg-amber-200"
+                className="text-xs bg-soft-100 text-soft-600 px-2 py-1 rounded-lg hover:bg-soft-200"
               >
                 О практике
               </button>
               {dailyGoals?.archive && dailyGoals.archive.length > 0 && (
                 <button
                   onClick={() => setShowDailyArchive(true)}
-                  className="text-xs bg-white text-amber-700 px-2 py-1 rounded-lg border border-amber-200 hover:bg-amber-50"
+                  className="text-xs bg-white text-soft-600 px-2 py-1 rounded-lg border border-soft-200 hover:bg-soft-50"
                 >
                   Архив ({dailyGoals.archive.length})
                 </button>
@@ -327,19 +327,19 @@ export function GoalsPage() {
           </div>
           
           {dailyGoals && dailyGoals.streak_days > 0 && (
-            <p className="text-xs text-amber-600 mb-3">
+            <p className="text-xs text-soft-500 mb-3">
               🔥 Серия: {dailyGoals.streak_days} {dailyGoals.streak_days === 1 ? 'день' : dailyGoals.streak_days < 5 ? 'дня' : 'дней'} подряд
             </p>
           )}
           
-          <p className="text-xs text-amber-600 mb-3">
-            Запиши 10 целей по памяти, не подглядывая вчерашние. Формулируй в настоящем времени: «Я...»
+          <p className="text-xs text-soft-500 mb-3">
+            Запиши 10 целей по памяти. Цели могут повторяться с прошлым днём — просто важно каждый раз фиксировать 10 штук. Формулируй в настоящем времени: «Я...»
           </p>
           
           <div className="space-y-2">
             {dailyGoalsInput.map((goal, index) => (
               <div key={index} className="flex gap-2">
-                <span className="text-xs text-amber-400 w-5 pt-2">{index + 1}.</span>
+                <span className="text-xs text-soft-400 w-5 pt-2">{index + 1}.</span>
                 <input
                   type="text"
                   value={goal}
@@ -349,7 +349,7 @@ export function GoalsPage() {
                     setDailyGoalsInput(newGoals)
                   }}
                   placeholder={`Цель ${index + 1}...`}
-                  className="flex-1 px-3 py-2 text-sm bg-white border border-amber-200 rounded-lg focus:border-amber-400 focus:outline-none"
+                  className="flex-1 px-3 py-2 text-sm bg-white border border-soft-200 rounded-lg focus:border-soft-400 focus:outline-none"
                 />
               </div>
             ))}
@@ -368,7 +368,7 @@ export function GoalsPage() {
               }
             }}
             disabled={savingDaily}
-            className="w-full mt-4 py-3 bg-amber-500 text-white rounded-xl font-medium hover:bg-amber-600 disabled:opacity-50"
+            className="w-full mt-4 py-3 bg-soft-600 text-white rounded-xl font-medium hover:bg-soft-700 disabled:opacity-50"
           >
             {savingDaily ? 'Сохраняю...' : '💾 Сохранить 10 целей'}
           </button>

@@ -53,9 +53,9 @@ export function FeedbackPage() {
           </a>
           <button
             onClick={() => navigate('/')}
-            className="w-full py-3 text-soft-500 hover:text-soft-700"
+            className="w-full py-3 bg-white border border-soft-300 text-soft-700 font-medium rounded-xl hover:bg-soft-50 hover:border-soft-400 shadow-sm"
           >
-            На главную
+            ← На главную
           </button>
         </div>
       </div>
@@ -69,9 +69,9 @@ export function FeedbackPage() {
           <h1 className="text-xl font-semibold text-soft-800">Обратная связь</h1>
           <button
             onClick={() => navigate(-1)}
-            className="text-soft-500 text-sm hover:text-soft-700"
+            className="px-4 py-2 bg-white border border-soft-300 text-soft-700 text-sm font-medium rounded-xl hover:bg-soft-50 hover:border-soft-400 shadow-sm"
           >
-            Отмена
+            ← Отмена
           </button>
         </div>
 

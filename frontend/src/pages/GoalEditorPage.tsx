@@ -76,9 +76,9 @@ export function GoalEditorPage() {
           </h1>
           <button
             onClick={() => navigate('/goals')}
-            className="text-soft-500 text-sm hover:text-soft-700"
+            className="px-4 py-2 bg-white border border-soft-300 text-soft-700 text-sm font-medium rounded-xl hover:bg-soft-50 hover:border-soft-400 shadow-sm"
           >
-            Назад
+            ← Назад
           </button>
         </div>
 

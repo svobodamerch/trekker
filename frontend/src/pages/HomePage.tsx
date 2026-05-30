@@ -7,7 +7,6 @@ import { getHomeSummary, type HomeSummary, type ReturnState } from '../api/home'
 import { getAuthDebugInfo, type AuthMode } from '../telegram/init'
 import { BetaDisclaimer } from '../components/BetaDisclaimer'
 import { getStoredUser } from '../utils/auth'
-import { analyzeAllEntries, type AIAnalysisResult } from '../api/ai'
 
 function DebugAuth() {
   const [info, setInfo] = useState<{
@@ -74,8 +73,6 @@ export function HomePage() {
   const [homeSummary, setHomeSummary] = useState<HomeSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<UsersStats | null>(null)
-  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResult | null>(null)
-  const [aiLoading, setAiLoading] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -194,74 +191,7 @@ export function HomePage() {
           >
             🤗 Круг поддержки
           </button>
-          <button
-            onClick={async () => {
-              setAiLoading(true)
-              try {
-                const result = await analyzeAllEntries()
-                setAiAnalysis(result)
-              } catch (e) {
-                console.error('AI analysis failed:', e)
-              } finally {
-                setAiLoading(false)
-              }
-            }}
-            disabled={aiLoading}
-            className="py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl font-medium hover:from-purple-600 hover:to-indigo-600 col-span-2 disabled:opacity-50"
-          >
-            {aiLoading ? '🔮 Анализирую записи...' : '🔮 AI-анализ всех записей'}
-          </button>
         </div>
-
-        {/* AI Analysis Results */}
-        {aiAnalysis && (
-          <SoftCard className="p-4 bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-100">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-2xl">🔮</span>
-              <h3 className="font-semibold text-purple-900">AI-анализ твоих записей</h3>
-              {aiAnalysis.is_placeholder && (
-                <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full">
-                  Демо
-                </span>
-              )}
-            </div>
-            
-            <div className="space-y-3 text-sm">
-              <div>
-                <p className="font-medium text-purple-800 mb-1">🎯 Ключевые паттерны</p>
-                <p className="text-purple-700">{aiAnalysis.key_patterns}</p>
-              </div>
-              <div>
-                <p className="font-medium text-purple-800 mb-1">💫 Эмоциональная динамика</p>
-                <p className="text-purple-700">{aiAnalysis.emotional_dynamics}</p>
-              </div>
-              {aiAnalysis.body_signals && aiAnalysis.body_signals !== 'Нет данных.' && (
-                <div>
-                  <p className="font-medium text-purple-800 mb-1">🫁 Телесные сигналы</p>
-                  <p className="text-purple-700">{aiAnalysis.body_signals}</p>
-                </div>
-              )}
-              <div>
-                <p className="font-medium text-purple-800 mb-1">💡 Темы инсайтов</p>
-                <p className="text-purple-700">{aiAnalysis.insight_themes}</p>
-              </div>
-              <div>
-                <p className="font-medium text-purple-800 mb-1">🎯 Связь с целями</p>
-                <p className="text-purple-700">{aiAnalysis.goal_alignment}</p>
-              </div>
-              <div className="pt-2 border-t border-purple-100">
-                <p className="font-medium text-purple-800 mb-1">✨ Рекомендации</p>
-                <p className="text-purple-700">{aiAnalysis.recommendations}</p>
-              </div>
-            </div>
-            
-            {aiAnalysis.entry_count && (
-              <p className="text-xs text-purple-400 mt-3">
-                Проанализировано записей: {aiAnalysis.entry_count}
-              </p>
-            )}
-          </SoftCard>
-        )}
 
         <div className="bg-soft-50 rounded-xl p-4 text-sm text-soft-500 space-y-1">
           <p className="font-medium text-soft-600 mb-2">Как пользоваться</p>

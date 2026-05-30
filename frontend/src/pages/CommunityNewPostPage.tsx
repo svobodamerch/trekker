@@ -100,9 +100,9 @@ export function CommunityNewPostPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/community')}
-              className="p-2 hover:bg-soft-100 rounded-lg"
+              className="px-3 py-2 bg-white border border-soft-300 text-soft-700 font-medium rounded-xl hover:bg-soft-50 hover:border-soft-400 shadow-sm"
             >
-              ←
+              ← Назад
             </button>
             <h1 className="text-lg font-semibold text-soft-800">
               {isShareMode ? 'Поделиться в Круге' : 'Новая публикация'}
